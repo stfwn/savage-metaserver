@@ -1,5 +1,7 @@
 # Metaserver
 
+[![Test](https://github.com/stfwn/savage-metaserver/actions/workflows/test.yml/badge.svg)](https://github.com/stfwn/savage-metaserver/actions/workflows/test.yml)
+
 ## Installation
 
 Install the dependencies in a virtual env:
