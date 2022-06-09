@@ -1,5 +1,5 @@
 serve:
-	uvicorn api:app --reload
+	uvicorn metaserver.api:app --reload
 
 test:
 	pytest
