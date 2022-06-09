@@ -1,6 +1,7 @@
 # Metaserver
 
 [![Test](https://github.com/stfwn/savage-metaserver/actions/workflows/test.yml/badge.svg)](https://github.com/stfwn/savage-metaserver/actions/workflows/test.yml)
+[![Lint](https://github.com/stfwn/savage-metaserver/actions/workflows/black.yml/badge.svg)](https://github.com/stfwn/savage-metaserver/actions/workflows/black.yml)
 
 ## Installation
 
