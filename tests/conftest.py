@@ -1,9 +1,10 @@
-from fastapi.testclient import TestClient
 import pytest
-from sqlmodel import create_engine
+from fastapi.testclient import TestClient
+from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
 from metaserver.api import app
+from metaserver.database.models import *
 import metaserver.database.api as db
 
 
@@ -14,5 +15,6 @@ def client():
         connect_args=dict(check_same_thread=False),
         poolclass=StaticPool,
     )
+
     with TestClient(app) as client:
         yield client

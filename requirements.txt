@@ -19,7 +19,7 @@ pyparsing==3.0.9
 pytest==7.1.2
 requests==2.27.1
 sniffio==1.2.0
-SQLAlchemy==1.4.37
+SQLAlchemy==1.4.35
 sqlalchemy2-stubs==0.0.2a23
 sqlmodel==0.0.6
 starlette==0.19.1
