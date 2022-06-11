@@ -30,7 +30,8 @@ class UserClanLink(SQLModel, table=True):
     user: "User" = Relationship(back_populates="clan_links")
 
     is_admin: bool = False
-    created: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    invited: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    joined: Optional[datetime]
     deleted: Optional[datetime]
 
 
@@ -57,7 +58,7 @@ class User(SQLModel, table=True):
     clan_links: list[UserClanLink] = Relationship(back_populates="user")
 
 
-class ReadUser(SQLModel):
+class UserRead(SQLModel):
     """User object that is returned when the outside world asks for a user."""
 
     id: int
