@@ -1,22 +1,17 @@
-import re
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Optional
 
-from pydantic import EmailStr, SecretStr, ValidationError
 from sqlmodel import (
     VARCHAR,
     Column,
     Field,
     Relationship,
     SQLModel,
-    String,
     create_engine,
 )
 
 
 class UserClanLink(SQLModel, table=True):
-    """Many-to-many link between User and Clan."""
-
     clan_id: Optional[int] = Field(
         default=None, foreign_key="clan.id", primary_key=True
     )
@@ -34,10 +29,8 @@ class UserClanLink(SQLModel, table=True):
 
 
 class User(SQLModel, table=True):
-    """User object in the database."""
-
     id: Optional[int] = Field(default=None, primary_key=True)
-    username: EmailStr = Field(
+    username: str = Field(
         sa_column=Column("username", VARCHAR, unique=True, nullable=False)
     )
     display_name: str
@@ -52,8 +45,6 @@ class User(SQLModel, table=True):
 
 
 class Clan(SQLModel, table=True):
-    """Clan object in the database."""
-
     id: Optional[int] = Field(default=None, primary_key=True)
     tag: str = Field(sa_column=Column("tag", VARCHAR, unique=True, nullable=False))
     name: str = Field(sa_column=Column("name", VARCHAR, unique=True, nullable=False))
