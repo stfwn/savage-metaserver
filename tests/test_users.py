@@ -44,7 +44,9 @@ def test_user_auth(client: TestClient):
     # Register a new user with display name that is too long.
     response = client.post(
         "/v1/user/register",
-        json=dict(username="foo@example.com", display_name="foo"*100, password=correct_pw),
+        json=dict(
+            username="foo@example.com", display_name="foo" * 100, password=correct_pw
+        ),
     )
     assert response.status_code == 422
 
