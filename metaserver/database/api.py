@@ -4,7 +4,8 @@ import os
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from metaserver.database import constants
-from metaserver.database.models import Clan, ClanCreate, UserClanLink, User
+from metaserver.database.models import Clan, UserClanLink, User
+from metaserver.schemas import ClanCreate
 import metaserver.database.patch  # Bugfix in SQLModel
 
 

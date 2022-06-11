@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import EmailStr, SecretStr, ValidationError, constr, validator
+from pydantic import EmailStr, SecretStr, ValidationError
 from sqlmodel import (
     VARCHAR,
     Column,
@@ -12,8 +12,6 @@ from sqlmodel import (
     String,
     create_engine,
 )
-
-from metaserver.database import utils
 
 
 class UserClanLink(SQLModel, table=True):
@@ -35,11 +33,6 @@ class UserClanLink(SQLModel, table=True):
     deleted: Optional[datetime]
 
 
-########
-# User #
-########
-
-
 class User(SQLModel, table=True):
     """User object in the database."""
 
@@ -58,34 +51,6 @@ class User(SQLModel, table=True):
     clan_links: list[UserClanLink] = Relationship(back_populates="user")
 
 
-class UserRead(SQLModel):
-    """User object that is returned when the outside world asks for a user."""
-
-    id: int
-    display_name: str
-    created: datetime
-
-
-class UserCreate(SQLModel):
-    """User object that is posted to register a new user."""
-
-    username: EmailStr
-    display_name: str = Field(min_length=1, max_length=32)
-    password: SecretStr = Field(min_length=8, max_length=32)
-
-
-class UserLogin(SQLModel):
-    """User object that is posted to login."""
-
-    username: EmailStr
-    password: SecretStr = Field(min_length=8, max_length=32)
-
-
-########
-# Clan #
-########
-
-
 class Clan(SQLModel, table=True):
     """Clan object in the database."""
 
@@ -96,14 +61,3 @@ class Clan(SQLModel, table=True):
     deleted: Optional[datetime]
 
     user_links: list[UserClanLink] = Relationship(back_populates="clan")
-
-    _validate_tag = validator("tag", allow_reuse=True)(utils.validate_tag)
-
-
-class ClanCreate(SQLModel):
-    """Clan object when the outside world wants to create a new clan."""
-
-    tag: str
-    name: str
-
-    _validate_tag = validator("tag", allow_reuse=True)(utils.validate_tag)

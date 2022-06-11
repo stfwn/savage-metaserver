@@ -7,7 +7,8 @@ from sqlmodel import Session
 
 import metaserver.database.api as db
 from metaserver import auth
-from metaserver.database import models
+from metaserver.database.models import Clan, User, UserClanLink
+from metaserver.schemas import ClanCreate, UserCreate, UserLogin, UserRead
 
 app = FastAPI()
 
@@ -28,44 +29,44 @@ def index():
 ############
 
 
-@app.get("/v1/user/by-id", response_model=models.UserRead)
+@app.get("/v1/user/by-id", response_model=UserRead)
 def user(
     user_id: int = Body(embed=True),
     *,
-    user: models.UserLogin = Depends(auth.auth_user),
+    user: UserLogin = Depends(auth.auth_user),
     session: Session = Depends(db.get_session),
 ):
     return db.get_user_by_id(session, user_id)
 
 
-@app.get("/v1/user/clan-invites", response_model=list[models.UserClanLink])
+@app.get("/v1/user/clan-invites", response_model=list[UserClanLink])
 def user_clan_invites(
     *,
-    user: models.UserLogin = Depends(auth.auth_user),
+    user: UserLogin = Depends(auth.auth_user),
     session: Session = Depends(db.get_session),
 ):
     return db.get_user_clan_invites(session, user)
 
 
-@app.post("/v1/user/login", response_model=models.UserRead)
+@app.post("/v1/user/login", response_model=UserRead)
 def user_login(
     *,
-    user: models.UserLogin = Depends(auth.auth_user),
+    user: UserLogin = Depends(auth.auth_user),
     session: Session = Depends(db.get_session),
 ):
     """Verify user credentials."""
     return user
 
 
-@app.post("/v1/user/register", response_model=models.UserRead)
+@app.post("/v1/user/register", response_model=UserRead)
 def user_register(
-    new_user: models.UserCreate,
+    new_user: UserCreate,
     *,
     session: Session = Depends(db.get_session),
 ):
     """Register a new user."""
     key, salt = auth.new_password(new_user.password)
-    user = models.User(
+    user = User(
         username=new_user.username,
         display_name=new_user.display_name,
         key=key,
@@ -78,12 +79,12 @@ def user_register(
         raise HTTPException(status.HTTP_409_CONFLICT)
 
 
-@app.post("/v1/user/change-display-name", response_model=models.UserRead)
+@app.post("/v1/user/change-display-name", response_model=UserRead)
 def user_change_display_name(
     display_name: str = Body(embed=True, min_length=1, max_length=32),
     *,
     session: Session = Depends(db.get_session),
-    user: models.UserLogin = Depends(auth.auth_user),
+    user: UserLogin = Depends(auth.auth_user),
 ):
     return db.change_display_name(session, user, display_name)
 
@@ -93,21 +94,21 @@ def user_change_display_name(
 ############
 
 
-@app.get("v1/clan/all", response_model=list[models.Clan])
+@app.get("v1/clan/all", response_model=list[Clan])
 def clan(
     *,
     session: Session = Depends(db.get_session),
-    user: models.UserLogin = Depends(auth.auth_user),
+    user: UserLogin = Depends(auth.auth_user),
 ):
     return db.get_all_clans(session)
 
 
-@app.get("/v1/clan/by-id", response_model=models.Clan)
+@app.get("/v1/clan/by-id", response_model=Clan)
 def clan_by_id(
     clan_id: int = Body(embed=True),
     *,
     session: Session = Depends(db.get_session),
-    user: models.UserLogin = Depends(auth.auth_user),
+    user: UserLogin = Depends(auth.auth_user),
 ):
     return db.get_clan_by_id(session, clan_id)
 
@@ -117,7 +118,7 @@ def clan_accept_invite(
     clan_id: int = Body(embed=True),
     *,
     session: Session = Depends(db.get_session),
-    user: models.UserLogin = Depends(auth.auth_user),
+    user: UserLogin = Depends(auth.auth_user),
 ):
     if db.user_is_invited_to_clan(session, user, clan_id):
         db.accept_clan_invite(session, user, clan_id)
@@ -131,7 +132,7 @@ def clan_invite(
     clan_id: int = Body(embed=True),
     *,
     session: Session = Depends(db.get_session),
-    user: models.UserLogin = Depends(auth.auth_user),
+    user: UserLogin = Depends(auth.auth_user),
 ):
     if db.user_is_clan_admin(session, user, clan_id):
         db.invite_user_to_clan(session, user_id, clan_id)
@@ -144,28 +145,28 @@ def clan_invites(
     clan_id: int = Body(embed=True),
     *,
     session: Session = Depends(db.get_session),
-    user: models.UserLogin = Depends(auth.auth_user),
+    user: UserLogin = Depends(auth.auth_user),
 ):
     if db.user_is_clan_admin(session, user, clan_id):
         return db.get_clan_user_invites(session, clan_id)
 
 
-@app.get("/v1/clan/members", response_model=list[models.UserRead])
+@app.get("/v1/clan/members", response_model=list[UserRead])
 def clan_members(
     clan_id: int = Body(embed=True),
     *,
     session: Session = Depends(db.get_session),
-    user: models.UserLogin = Depends(auth.auth_user),
+    user: UserLogin = Depends(auth.auth_user),
 ):
     return db.get_clan_members(session, clan_id)
 
 
-@app.post("/v1/clan/register", response_model=models.Clan)
+@app.post("/v1/clan/register", response_model=Clan)
 def clan_register(
-    new_clan: models.ClanCreate,
+    new_clan: ClanCreate,
     *,
     session: Session = Depends(db.get_session),
-    user: models.UserLogin = Depends(auth.auth_user),
+    user: UserLogin = Depends(auth.auth_user),
 ):
     try:
         return db.create_clan(session, user, new_clan)
