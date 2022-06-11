@@ -25,12 +25,28 @@ def test_user_auth(client: TestClient):
     )
     assert response.status_code == 200
 
+    # Get the user
+    user = response.json()
+    response = client.get(
+        "/v1/user/by-id",
+        json=dict(user_id=user["id"]),
+        auth=("foo@example.com", correct_pw),
+    )
+    assert response.json() == user
+
     # Register a new user with taken username.
     response = client.post(
         "/v1/user/register",
         json=dict(username="foo@example.com", display_name="foo", password=correct_pw),
     )
     assert response.status_code == 409
+
+    # Register a new user with display name that is too long.
+    response = client.post(
+        "/v1/user/register",
+        json=dict(username="foo@example.com", display_name="foo"*100, password=correct_pw),
+    )
+    assert response.status_code == 422
 
     # Register a new user with email that is not an email.
     response = client.post(
@@ -60,3 +76,36 @@ def test_user_auth(client: TestClient):
     # Login with wrong password.
     response = client.post("/v1/user/login", auth=("foo@example.com", wrong_pw))
     assert response.status_code == 401
+
+
+def test_user_display_name(client: TestClient):
+    auth = ("foo@example.com", "12345678")
+
+    # Register a new user.
+    user = client.post(
+        "/v1/user/register",
+        json=dict(username=auth[0], display_name="foo", password=auth[1]),
+    ).json()
+
+    # Change display name.
+    new_display_name = "bar"
+    response = client.post(
+        "/v1/user/change-display-name",
+        json=dict(display_name=new_display_name),
+        auth=auth,
+    )
+    assert response.json()["display_name"] == new_display_name
+
+    # Verify that the change persisted.
+    user["display_name"] = new_display_name
+    response = client.get("/v1/user/by-id", json=dict(user_id=user["id"]), auth=auth)
+    assert response.json() == user
+
+    # Attempt to change to a display name that is too long
+    new_display_name *= 80
+    response = client.post(
+        "/v1/user/change-display-name",
+        json=dict(display_name=new_display_name),
+        auth=auth,
+    )
+    assert response.status_code == 422

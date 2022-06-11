@@ -67,6 +67,14 @@ def accept_clan_invite(session: Session, user: User, clan_id: int):
             clan_link.joined = datetime.utcnow()
 
 
+def change_display_name(session: Session, user: User, display_name: str) -> User:
+    user.display_name = display_name
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
 ########
 # Clan #
 ########

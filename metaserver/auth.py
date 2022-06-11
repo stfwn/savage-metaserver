@@ -33,7 +33,7 @@ def new_password(password: SecretStr):
 def auth_user(
     session: Session = Depends(db.get_session),
     credentials: HTTPBasicCredentials = Depends(security),
-) -> Optional[User]:
+) -> User:
     user = db.get_user_by_username(session, credentials.username)
     supplied_key = hash_password(credentials.password, user.salt)
     if secrets.compare_digest(supplied_key, user.key):

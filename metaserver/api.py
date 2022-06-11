@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import Body, Depends, FastAPI, HTTPException, status
-from pydantic import ValidationError
+from pydantic import Field, ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
@@ -26,6 +26,16 @@ def index():
 ############
 # /v1/user #
 ############
+
+
+@app.get("/v1/user/by-id", response_model=models.UserRead)
+def user(
+    user_id: int = Body(embed=True),
+    *,
+    user: models.UserLogin = Depends(auth.auth_user),
+    session: Session = Depends(db.get_session),
+):
+    return db.get_user_by_id(session, user_id)
 
 
 @app.get("/v1/user/clan-invites", response_model=list[models.UserClanLink])
@@ -66,6 +76,16 @@ def user_register(
     except IntegrityError:
         # The username is taken.
         raise HTTPException(status.HTTP_409_CONFLICT)
+
+
+@app.post("/v1/user/change-display-name", response_model=models.UserRead)
+def user_change_display_name(
+    display_name: str = Body(embed=True, min_length=1, max_length=32),
+    *,
+    session: Session = Depends(db.get_session),
+    user: models.UserLogin = Depends(auth.auth_user),
+):
+    return db.change_display_name(session, user, display_name)
 
 
 ############

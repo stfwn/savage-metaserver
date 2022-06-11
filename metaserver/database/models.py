@@ -47,7 +47,7 @@ class User(SQLModel, table=True):
     username: EmailStr = Field(
         sa_column=Column("username", VARCHAR, unique=True, nullable=False)
     )
-    display_name: str = Field(min_length=1, max_length=32)
+    display_name: str
     key: str
     salt: str
     created: datetime = Field(default_factory=datetime.utcnow, nullable=False)
@@ -70,7 +70,7 @@ class UserCreate(SQLModel):
     """User object that is posted to register a new user."""
 
     username: EmailStr
-    display_name: str
+    display_name: str = Field(min_length=1, max_length=32)
     password: SecretStr = Field(min_length=8, max_length=32)
 
 
