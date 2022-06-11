@@ -21,7 +21,7 @@ class UserCreate(BaseModel):
     """User object that is posted to register a new user."""
 
     username: EmailStr
-    display_name: str = Field(min_length=1, max_length=32)
+    display_name: str = Field(min_length=1, max_length=64)
     password: SecretStr = Field(min_length=8, max_length=32)
 
 

@@ -81,7 +81,7 @@ def user_register(
 
 @app.post("/v1/user/change-display-name", response_model=UserRead)
 def user_change_display_name(
-    display_name: str = Body(embed=True, min_length=1, max_length=32),
+    display_name: str = Body(embed=True, min_length=1, max_length=64),
     *,
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
