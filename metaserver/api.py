@@ -79,6 +79,16 @@ def user_register(
         raise HTTPException(status.HTTP_409_CONFLICT)
 
 
+@app.post("/v1/user/verify-clan-membership")
+def user_verify_clan_membership(
+    clan_id: int = Body(embed=True),
+    *,
+    session: Session = Depends(db.get_session),
+    user: UserLogin = Depends(auth.auth_user),
+):
+    return db.user_is_clan_member(session, user, clan_id)
+
+
 @app.post("/v1/user/change-display-name", response_model=UserRead)
 def user_change_display_name(
     display_name: str = Body(embed=True, min_length=1, max_length=64),

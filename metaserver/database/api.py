@@ -55,6 +55,13 @@ def user_is_clan_admin(session: Session, user: User, clan_id: int) -> bool:
     return False
 
 
+def user_is_clan_member(session: Session, user: User, clan_id: int) -> bool:
+    for clan_link in user.clan_links:
+        if clan_link.clan.id == clan_id and clan_link.joined and not clan_link.deleted:
+            return True
+    return False
+
+
 def user_is_invited_to_clan(session: Session, user: User, clan_id: int) -> bool:
     for clan_link in user.clan_links:
         if clan_link.clan.id == clan_id:

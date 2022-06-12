@@ -100,6 +100,22 @@ def test_clan_invitation(client: TestClient):
     )
     assert response.json() == [admin]
 
+    # Admin is a member
+    response = client.post(
+        "/v1/user/verify-clan-membership",
+        json=dict(clan_id=clan["id"]),
+        auth=admin_auth,
+    )
+    assert response.json() == True
+
+    # Non-admin is not a member
+    response = client.post(
+        "/v1/user/verify-clan-membership",
+        json=dict(clan_id=clan["id"]),
+        auth=nonadmin_auth,
+    )
+    assert response.json() == False
+
     # Admin can invite people.
     response = client.post(
         "/v1/clan/invite",
@@ -115,6 +131,14 @@ def test_clan_invitation(client: TestClient):
         auth=admin_auth,
     )
     assert [inv["user_id"] for inv in response.json()] == [nonadmin["id"]]
+
+    # Non-admin is still not a member
+    response = client.post(
+        "/v1/user/verify-clan-membership",
+        json=dict(clan_id=clan["id"]),
+        auth=nonadmin_auth,
+    )
+    assert response.json() == False
 
     # Invites can be accepted.
     response = client.post(
