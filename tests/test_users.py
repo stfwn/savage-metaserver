@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 import pytest
 from sqlmodel import Session
 
-import metaserver
+from tests.utils import dict_without_key
 
 
 def test_user_auth(client: TestClient):
@@ -32,7 +32,7 @@ def test_user_auth(client: TestClient):
         json=dict(user_id=user["id"]),
         auth=("foo@example.com", correct_pw),
     )
-    assert response.json() == user
+    assert response.json() == dict_without_key(user, "proof")
 
     # Register a new user with taken username.
     response = client.post(
@@ -101,7 +101,7 @@ def test_user_display_name(client: TestClient):
     # Verify that the change persisted.
     user["display_name"] = new_display_name
     response = client.get("/v1/user/by-id", json=dict(user_id=user["id"]), auth=auth)
-    assert response.json() == user
+    assert response.json() == dict_without_key(user, "proof")
 
     # Attempt to change to a display name that is too long
     new_display_name *= 80
@@ -111,3 +111,39 @@ def test_user_display_name(client: TestClient):
         auth=auth,
     )
     assert response.status_code == 422
+
+
+def test_user_proof(client: TestClient):
+    # Register two new users.
+    user_0 = client.post(
+        "/v1/user/register",
+        json=dict(username="foo@example.com", display_name="foo", password="12345678"),
+    ).json()
+
+    # Register another user.
+    user_1 = client.post(
+        "/v1/user/register",
+        json=dict(username="foo2@example.com", display_name="foo", password="12345678"),
+    ).json()
+
+    # Verify user 0's proof using user 0's login.
+    response = client.post(
+        "/v1/user/verify-user-proof",
+        json=dict(
+            user_id=user_0["id"],
+            user_proof=user_0["proof"],
+        ),
+        auth=("foo@example.com", "12345678"),
+    )
+    assert response.json() == True
+
+    # Verify user 0's proof using user 1's login.
+    response = client.post(
+        "/v1/user/verify-user-proof",
+        json=dict(
+            user_id=user_0["id"],
+            user_proof=user_0["proof"],
+        ),
+        auth=("foo2@example.com", "12345678"),
+    )
+    assert response.json() == True

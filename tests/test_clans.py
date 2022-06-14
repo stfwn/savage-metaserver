@@ -1,5 +1,7 @@
 from fastapi.testclient import TestClient
 
+from tests.utils import dict_without_key
+
 
 def test_clan_registration(client: TestClient):
     # Register a new user.
@@ -52,18 +54,24 @@ def test_clan_invitation(client: TestClient):
     clan_name, clan_tag = "Zaitev's Snore Club", "Zzz"
     nonadmin_auth = "bar@example.com", "10293801293"
 
-    admin = client.post(
-        "/v1/user/register",
-        json=dict(
-            username=admin_auth[0], display_name="Zaitev", password=admin_auth[1]
-        ),
-    ).json()
-    nonadmin = client.post(
-        "/v1/user/register",
-        json=dict(
-            username=nonadmin_auth[0], display_name="Hax", password=nonadmin_auth[1]
-        ),
-    ).json()
+    admin = dict_without_key(
+        client.post(
+            "/v1/user/register",
+            json=dict(
+                username=admin_auth[0], display_name="Zaitev", password=admin_auth[1]
+            ),
+        ).json(),
+        "proof",
+    )
+    nonadmin = dict_without_key(
+        client.post(
+            "/v1/user/register",
+            json=dict(
+                username=nonadmin_auth[0], display_name="Hax", password=nonadmin_auth[1]
+            ),
+        ).json(),
+        "proof",
+    )
     clan = client.post(
         "/v1/clan/register", json=dict(tag=clan_tag, name=clan_name), auth=admin_auth
     ).json()

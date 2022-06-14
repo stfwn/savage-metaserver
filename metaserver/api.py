@@ -8,7 +8,13 @@ from sqlmodel import Session
 import metaserver.database.api as db
 from metaserver import auth
 from metaserver.database.models import Clan, User, UserClanLink
-from metaserver.schemas import ClanCreate, UserCreate, UserLogin, UserRead
+from metaserver.schemas import (
+    ClanCreate,
+    UserCreate,
+    UserLogin,
+    UserRead,
+    UserReadWithProof,
+)
 
 app = FastAPI()
 
@@ -48,17 +54,36 @@ def user_clan_invites(
     return db.get_user_clan_invites(session, user)
 
 
-@app.post("/v1/user/login", response_model=UserRead)
-def user_login(
+@app.post("/v1/user/login", response_model=UserReadWithProof)
+def user_login(*, user: UserLogin = Depends(auth.auth_user)):
+    """Verify user credentials and obtain a user proof token. The user provides
+    this token to a third party (like a game server) to prove that they are
+    registered with this meta server. The third party then verifies this token
+    using the `/v1/user/verify-user-proof` route.
+
+    Because the implementation is cryptographic there's no need to store tokens
+    in the database, but all user proof tokens are invalidated together
+    periodically and whenever the server secret involved is refreshed. It is
+    unlikely that user numbers are ever going to get so crazy that the wave of
+    requests to this route after a token invalidation event overwhelms the
+    server, but if this happens the system should be expanded so that each user
+    should receive their own TTL token."""
+    user_proof = auth.generate_user_proof(user.id)  # type: ignore
+    return UserReadWithProof(**user.dict(), proof=user_proof)
+
+
+@app.post("/v1/user/verify-user-proof", response_model=bool)
+def user_verify_user_proof(
+    user_id: int = Body(embed=True),
+    user_proof: str = Body(embed=True),
     *,
     user: UserLogin = Depends(auth.auth_user),
     session: Session = Depends(db.get_session),
 ):
-    """Verify user credentials."""
-    return user
+    return auth.verify_user_proof(user_id, user_proof)
 
 
-@app.post("/v1/user/register", response_model=UserRead)
+@app.post("/v1/user/register", response_model=UserReadWithProof)
 def user_register(
     new_user: UserCreate,
     *,
@@ -73,7 +98,8 @@ def user_register(
         salt=salt,
     )
     try:
-        return db.create_user(session, user)
+        user = db.create_user(session, user)
+        return UserReadWithProof(**user.dict(), proof=auth.generate_user_proof(user.id))
     except IntegrityError:
         # The username is taken.
         raise HTTPException(status.HTTP_409_CONFLICT)

@@ -11,6 +11,7 @@ from sqlmodel import Session
 
 from metaserver.database.models import User
 import metaserver.database.api as db
+from metaserver import constants
 
 security = HTTPBasic()
 
@@ -43,3 +44,20 @@ def auth_user(
         detail="Incorrect username or password",
         headers={"WWW-Authenticate": "Basic"},
     )
+
+
+def generate_user_proof(user_id: int) -> str:
+    return hashlib.sha256(
+        (
+            # Proofs are specific to users.
+            str(user_id)
+            # Only the server can generate proofs.
+            + constants.secret_for_user_proof
+            # Proofs invalidate every day at 00:00 UTC.
+            + datetime.utcnow().strftime("%Y-%m-%d")
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def verify_user_proof(user_id: int, user_proof: str) -> bool:
+    return secrets.compare_digest(user_proof, generate_user_proof(user_id))

@@ -10,11 +10,22 @@ from pydantic import BaseModel, EmailStr, Field, SecretStr, ValidationError, val
 
 
 class UserRead(BaseModel):
-    """User object that is returned when the outside world asks for a user."""
+    """Object that is returned when the outside world asks for a user. This is
+    safe to return to anyone."""
 
     id: int
     display_name: str
     created: datetime
+
+
+class UserReadWithProof(BaseModel):
+    """Object that is returned when a user logs in. Only return this to users
+    that are authorized as the user that this object refers to."""
+
+    id: int
+    display_name: str
+    created: datetime
+    proof: str
 
 
 class UserCreate(BaseModel):
