@@ -1,13 +1,12 @@
-from datetime import datetime
 import os
+from datetime import datetime
 
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from metaserver.database import constants
-from metaserver.database.models import Clan, UserClanLink, User, Skin
-from metaserver.schemas import ClanCreate
 import metaserver.database.patch  # Bugfix in SQLModel
-
+from metaserver.database import constants
+from metaserver.database.models import Clan, Skin, User, UserClanLink
+from metaserver.schemas import ClanCreate
 
 engine = create_engine(
     constants.database_url,

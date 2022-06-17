@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 
-from tests.utils import dict_without_key
 import metaserver.database.api as db
 import metaserver.database.models as models
+from tests.utils import dict_without_key
 
 
 def test_user_skins(client: TestClient):

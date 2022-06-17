@@ -1,8 +1,8 @@
-from datetime import datetime
 import re
+from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field, SecretStr, ValidationError, validator
-
+from pydantic import (BaseModel, EmailStr, Field, SecretStr, ValidationError,
+                      validator)
 
 ########
 # User #

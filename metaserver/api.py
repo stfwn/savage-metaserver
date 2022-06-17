@@ -7,14 +7,9 @@ from sqlmodel import Session
 
 import metaserver.database.api as db
 from metaserver import auth
-from metaserver.database.models import Clan, User, UserClanLink, Skin
-from metaserver.schemas import (
-    ClanCreate,
-    UserCreate,
-    UserLogin,
-    UserRead,
-    UserReadWithProof,
-)
+from metaserver.database.models import Clan, Skin, User, UserClanLink
+from metaserver.schemas import (ClanCreate, UserCreate, UserLogin, UserRead,
+                                UserReadWithProof)
 
 app = FastAPI()
 

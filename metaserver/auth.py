@@ -9,9 +9,9 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import SecretStr
 from sqlmodel import Session
 
-from metaserver.database.models import User
 import metaserver.database.api as db
 from metaserver import constants
+from metaserver.database.models import User
 
 security = HTTPBasic()
 

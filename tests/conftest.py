@@ -3,11 +3,9 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
+import metaserver.database.api as db
 from metaserver.api import app
 from metaserver.database.models import *
-import metaserver.database.api as db
-
-
 
 
 @pytest.fixture
