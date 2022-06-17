@@ -64,10 +64,28 @@ def test_clan_skins(client: TestClient):
     session.add(link)
     session.commit()
 
-    # Check that we're getting it back from the route.
+    # Check that we're getting it back from the clan route.
     response = client.get(
         "/v1/skin/for-clan/by-id", json=dict(clan_id=clan["id"]), auth=user_auth
     )
     assert dict_without_key(response.json()[0], "id") == dict(
         description=None, kind=kind, unit=unit, model_path=model_path
     )
+
+    # Check that we're getting it back from the user route if we ask for it.
+    response = client.get(
+        "/v1/skin/for-user/by-id",
+        json=dict(user_id=user["id"], clan_id=clan["id"]),
+        auth=user_auth,
+    )
+    assert dict_without_key(response.json()[0], "id") == dict(
+        description=None, kind=kind, unit=unit, model_path=model_path
+    )
+
+    # Check that we're not getting it back from the user route if we don't ask.
+    response = client.get(
+        "/v1/skin/for-user/by-id",
+        json=dict(user_id=user["id"]),
+        auth=user_auth,
+    )
+    assert response.json() == []

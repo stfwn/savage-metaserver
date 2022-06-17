@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import Body, Depends, FastAPI, HTTPException, status
 from pydantic import Field, ValidationError
 from sqlalchemy.exc import IntegrityError
@@ -219,11 +217,15 @@ def clan_register(
 @app.get("/v1/skin/for-user/by-id", response_model=list[Skin])
 def skin_for_user_by_id(
     user_id: int = Body(embed=True),
+    clan_id: int | None = Body(default=None, embed=True),
     *,
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
-    return db.get_skins_for_user_by_id(session, user_id)
+    skins = db.get_skins_for_user_by_id(session, user_id)
+    if clan_id:
+        skins += db.get_skins_for_clan_by_id(session, clan_id)
+    return skins
 
 
 @app.get("/v1/skin/for-clan/by-id", response_model=list[Skin])
