@@ -1,8 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlmodel import (VARCHAR, Column, Field, Relationship, SQLModel,
-                      create_engine)
+from sqlmodel import VARCHAR, Column, Field, Relationship, SQLModel, create_engine
 
 
 class UserClanLink(SQLModel, table=True):
