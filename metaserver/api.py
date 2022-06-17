@@ -7,7 +7,7 @@ from sqlmodel import Session
 
 import metaserver.database.api as db
 from metaserver import auth
-from metaserver.database.models import Clan, User, UserClanLink
+from metaserver.database.models import Clan, User, UserClanLink, Skin
 from metaserver.schemas import (
     ClanCreate,
     UserCreate,
@@ -80,6 +80,7 @@ def user_verify_user_proof(
     user: UserLogin = Depends(auth.auth_user),
     session: Session = Depends(db.get_session),
 ):
+    """Verify user proof. See docstring for user login for more."""
     return auth.verify_user_proof(user_id, user_proof)
 
 
@@ -208,3 +209,28 @@ def clan_register(
         return db.create_clan(session, user, new_clan)
     except ValidationError:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+
+############
+# /v1/skin #
+############
+
+
+@app.get("/v1/skin/for-user/by-id", response_model=list[Skin])
+def skin_for_user_by_id(
+    user_id: int = Body(embed=True),
+    *,
+    session: Session = Depends(db.get_session),
+    user: UserLogin = Depends(auth.auth_user),
+):
+    return db.get_skins_for_user_by_id(session, user_id)
+
+
+@app.get("/v1/skin/for-clan/by-id", response_model=list[Skin])
+def skin_for_clan_by_id(
+    clan_id: int = Body(embed=True),
+    *,
+    session: Session = Depends(db.get_session),
+    user: UserLogin = Depends(auth.auth_user),
+):
+    return db.get_skins_for_clan_by_id(session, clan_id)

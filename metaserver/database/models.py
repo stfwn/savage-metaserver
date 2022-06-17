@@ -28,6 +28,30 @@ class UserClanLink(SQLModel, table=True):
     deleted: Optional[datetime]
 
 
+class ClanSkinLink(SQLModel, table=True):
+    skin_id: Optional[int] = Field(
+        default=None, foreign_key="skin.id", primary_key=True
+    )
+    clan_id: Optional[int] = Field(
+        default=None, foreign_key="clan.id", primary_key=True
+    )
+
+    skin: "Skin" = Relationship(back_populates="clan_links")
+    clan: "Clan" = Relationship(back_populates="skin_links")
+
+
+class UserSkinLink(SQLModel, table=True):
+    skin_id: Optional[int] = Field(
+        default=None, foreign_key="skin.id", primary_key=True
+    )
+    user_id: Optional[int] = Field(
+        default=None, foreign_key="user.id", primary_key=True
+    )
+
+    skin: "Skin" = Relationship(back_populates="user_links")
+    user: "User" = Relationship(back_populates="skin_links")
+
+
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(
@@ -42,6 +66,7 @@ class User(SQLModel, table=True):
     deleted_reason: Optional[str]
 
     clan_links: list[UserClanLink] = Relationship(back_populates="user")
+    skin_links: list[UserSkinLink] = Relationship(back_populates="user")
 
 
 class Clan(SQLModel, table=True):
@@ -52,3 +77,15 @@ class Clan(SQLModel, table=True):
     deleted: Optional[datetime]
 
     user_links: list[UserClanLink] = Relationship(back_populates="clan")
+    skin_links: list[ClanSkinLink] = Relationship(back_populates="clan")
+
+
+class Skin(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    description: Optional[str]
+    kind: str
+    unit: str
+    model_path: str
+
+    user_links: list[UserSkinLink] = Relationship(back_populates="skin")
+    clan_links: list[ClanSkinLink] = Relationship(back_populates="skin")

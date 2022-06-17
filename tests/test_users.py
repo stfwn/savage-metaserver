@@ -1,6 +1,4 @@
 from fastapi.testclient import TestClient
-import pytest
-from sqlmodel import Session
 
 from tests.utils import dict_without_key
 

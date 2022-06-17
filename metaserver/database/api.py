@@ -4,7 +4,7 @@ import os
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from metaserver.database import constants
-from metaserver.database.models import Clan, UserClanLink, User
+from metaserver.database.models import Clan, UserClanLink, User, Skin
 from metaserver.schemas import ClanCreate
 import metaserver.database.patch  # Bugfix in SQLModel
 
@@ -125,3 +125,18 @@ def invite_user_to_clan(session: Session, user_id: int, clan_id: int):
 def get_clan_members(session: Session, clan_id: int) -> list[User]:
     clan = get_clan_by_id(session, clan_id)
     return [link.user for link in clan.user_links]
+
+
+########
+# Skin #
+########
+
+
+def get_skins_for_user_by_id(session: Session, user_id: int) -> list[Skin]:
+    user = get_user_by_id(session, user_id)
+    return [link.skin for link in user.skin_links]
+
+
+def get_skins_for_clan_by_id(session: Session, clan_id: int) -> list[Skin]:
+    clan = get_clan_by_id(session, clan_id)
+    return [link.skin for link in clan.skin_links]
