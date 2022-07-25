@@ -41,6 +41,31 @@ Install the dependencies in a virtual env:
 
 ## FAQ
 
+### What is the user registeration/login/user proof token flow?
+
+```mermaid
+
+flowchart TD
+   s(("User starts the game"))
+   p["Game uses credentials to request\nuser proof from metaserver"]
+   l["Game shows login screen"]
+   r["Game shows registration screen"]
+   register["Game registers user with metaserver\nMetaserver sends email confirmation\nGame shows email token entry screen"]
+   s -->|Username & password are saved locally| p
+   s -->|Username & password are not saved locally| l
+   l -->|User does not have an account| r
+   l -->|User enters valid auth| p
+   p -->|Auth is valid| browser["Game stores user credentials on disk\nGame stores user proof in memory\nUser browses servers"]
+   p -->|Auth is invalid| l
+   r -->|User enters valid username, display name and password| register
+   r -->|User enters invalid data\nMetaserver reports errors to game\nGame reports errors to user| r
+   register -->|User enters valid email token| p
+   browser -->|User joins server| proof["Game provides user proof to game server"]
+   proof -->|User proof is invalid| l
+   proof -->|User proof is valid| play(("User plays game"))
+   l -->|User enters invalid auth\nMetaserver reports errors to game\nGame reports errors to user| l
+```
+
 ### I can haz REST spec?
 
 Yes. Follow the installation steps, run the server with `make serve` and visit
