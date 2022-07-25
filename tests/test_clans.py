@@ -3,21 +3,13 @@ from fastapi.testclient import TestClient
 from tests.utils import dict_without_key
 
 
-def test_clan_registration(client: TestClient):
-    # Register a new user.
-    username, password = "foo@example.com", "12345678"
-    response = client.post(
-        "/v1/user/register",
-        json=dict(username=username, display_name="Zaitev", password=password),
-    )
-    assert response.status_code == 200
-
+def test_clan_registration(client: TestClient, user: dict):
     # Register a new clan.
     clan_name, clan_tag = "Zaitev's Snore Club", "Zzz"
     response = client.post(
         "/v1/clan/register",
         json=dict(tag=clan_tag, name=clan_name),
-        auth=(username, password),
+        auth=user["auth"],
     )
     assert response.status_code == 200
     assert response.json()["name"] == clan_name
@@ -27,7 +19,7 @@ def test_clan_registration(client: TestClient):
     response = client.get(
         "/v1/clan/by-id",
         json=dict(clan_id=clan["id"]),
-        auth=(username, password),
+        auth=user["auth"],
     )
     assert clan == response.json()
 
@@ -35,52 +27,34 @@ def test_clan_registration(client: TestClient):
     response = client.get(
         "/v1/clan/members",
         json=dict(clan_id=clan["id"]),
-        auth=(username, password),
+        auth=user["auth"],
     )
-    assert response.json()[0]["display_name"] == "Zaitev"
+    assert response.json()[0]["display_name"] == user["display_name"]
 
     # Register a new clan with an illegal name.
     response = client.post(
         "/v1/clan/register",
         json=dict(tag="^900" * 5, name="Zaitev's Snore Club"),
-        auth=(username, password),
+        auth=user["auth"],
     )
     assert response.status_code == 422
 
 
-def test_clan_invitation(client: TestClient):
+def test_clan_invitation(client: TestClient, user: dict, user2: dict):
     # Setup
-    admin_auth = "foo@example.com", "12345678"
     clan_name, clan_tag = "Zaitev's Snore Club", "Zzz"
-    nonadmin_auth = "bar@example.com", "10293801293"
 
-    admin = dict_without_key(
-        client.post(
-            "/v1/user/register",
-            json=dict(
-                username=admin_auth[0], display_name="Zaitev", password=admin_auth[1]
-            ),
-        ).json(),
-        "proof",
-    )
-    nonadmin = dict_without_key(
-        client.post(
-            "/v1/user/register",
-            json=dict(
-                username=nonadmin_auth[0], display_name="Hax", password=nonadmin_auth[1]
-            ),
-        ).json(),
-        "proof",
-    )
+    admin = dict_without_key(user, "proof")
+    nonadmin = dict_without_key(user2, "proof")
     clan = client.post(
-        "/v1/clan/register", json=dict(tag=clan_tag, name=clan_name), auth=admin_auth
+        "/v1/clan/register", json=dict(tag=clan_tag, name=clan_name), auth=admin["auth"]
     ).json()
 
     # Outsider can't invite people.
     response = client.post(
         "/v1/clan/invite",
         json=dict(user_id=nonadmin["id"], clan_id=clan["id"]),
-        auth=nonadmin_auth,
+        auth=nonadmin["auth"],
     )
     assert response.status_code == 401
 
@@ -88,7 +62,7 @@ def test_clan_invitation(client: TestClient):
     response = client.post(
         "/v1/clan/accept-invite",
         json=dict(clan_id=clan["id"]),
-        auth=nonadmin_auth,
+        auth=nonadmin["auth"],
     )
     assert response.status_code == 401
 
@@ -96,7 +70,7 @@ def test_clan_invitation(client: TestClient):
     response = client.get(
         "/v1/clan/invites",
         json=dict(clan_id=clan["id"]),
-        auth=admin_auth,
+        auth=admin["auth"],
     )
     assert response.json() == []
 
@@ -104,15 +78,15 @@ def test_clan_invitation(client: TestClient):
     response = client.get(
         "/v1/clan/members",
         json=dict(clan_id=clan["id"]),
-        auth=nonadmin_auth,
+        auth=nonadmin["auth"],
     )
-    assert response.json() == [admin]
+    assert response.json() == [dict_without_key(admin, "auth")]
 
     # Admin is a member
     response = client.post(
         "/v1/user/verify-clan-membership",
         json=dict(clan_id=clan["id"]),
-        auth=admin_auth,
+        auth=admin["auth"],
     )
     assert response.json() == True
 
@@ -120,7 +94,7 @@ def test_clan_invitation(client: TestClient):
     response = client.post(
         "/v1/user/verify-clan-membership",
         json=dict(clan_id=clan["id"]),
-        auth=nonadmin_auth,
+        auth=nonadmin["auth"],
     )
     assert response.json() == False
 
@@ -128,7 +102,7 @@ def test_clan_invitation(client: TestClient):
     response = client.post(
         "/v1/clan/invite",
         json=dict(user_id=nonadmin["id"], clan_id=clan["id"]),
-        auth=admin_auth,
+        auth=admin["auth"],
     )
     assert response.status_code == 200
 
@@ -136,7 +110,7 @@ def test_clan_invitation(client: TestClient):
     response = client.get(
         "/v1/clan/invites",
         json=dict(clan_id=clan["id"]),
-        auth=admin_auth,
+        auth=admin["auth"],
     )
     assert [inv["user_id"] for inv in response.json()] == [nonadmin["id"]]
 
@@ -144,7 +118,7 @@ def test_clan_invitation(client: TestClient):
     response = client.post(
         "/v1/user/verify-clan-membership",
         json=dict(clan_id=clan["id"]),
-        auth=nonadmin_auth,
+        auth=nonadmin["auth"],
     )
     assert response.json() == False
 
@@ -152,7 +126,7 @@ def test_clan_invitation(client: TestClient):
     response = client.post(
         "/v1/clan/accept-invite",
         json=dict(clan_id=clan["id"]),
-        auth=nonadmin_auth,
+        auth=nonadmin["auth"],
     )
     assert response.status_code == 200
 
@@ -160,16 +134,17 @@ def test_clan_invitation(client: TestClient):
     response = client.get(
         "/v1/clan/members",
         json=dict(clan_id=clan["id"]),
-        auth=nonadmin_auth,
+        auth=nonadmin["auth"],
     )
     assert sorted(response.json(), key=lambda u: u["id"]) == sorted(
-        [admin, nonadmin], key=lambda u: u["id"]
+        [dict_without_key(admin, "auth"), dict_without_key(nonadmin, "auth")],
+        key=lambda u: u["id"],
     )
 
     # Regular member can't invite people.
     response = client.post(
         "/v1/clan/invite",
         json=dict(user_id=nonadmin["id"], clan_id=clan["id"]),
-        auth=nonadmin_auth,
+        auth=nonadmin["auth"],
     )
     assert response.status_code == 401

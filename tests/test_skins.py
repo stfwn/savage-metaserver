@@ -5,14 +5,7 @@ import metaserver.database.models as models
 from tests.utils import dict_without_key
 
 
-def test_user_skins(client: TestClient):
-    # Register a new user.
-    user_auth = ("foo@example.com", "12345678")
-    user = client.post(
-        "/v1/user/register",
-        json=dict(username=user_auth[0], display_name="foo", password=user_auth[1]),
-    ).json()
-
+def test_user_skins(client: TestClient, user: dict):
     # Add skin for user
     session = next(db.get_session())
     user_obj = db.get_user_by_id(session, user["id"])
@@ -28,27 +21,20 @@ def test_user_skins(client: TestClient):
 
     # Check that we're getting it back from the route.
     response = client.get(
-        "/v1/skin/for-user/by-id", json=dict(user_id=user["id"]), auth=user_auth
+        "/v1/skin/for-user/by-id", json=dict(user_id=user["id"]), auth=user["auth"]
     )
     assert dict_without_key(response.json()[0], "id") == dict(
         description=None, kind=kind, unit=unit, model_path=model_path
     )
 
 
-def test_clan_skins(client: TestClient):
-    # Register a new user.
-    user_auth = ("foo@example.com", "12345678")
-    user = client.post(
-        "/v1/user/register",
-        json=dict(username=user_auth[0], display_name="foo", password=user_auth[1]),
-    ).json()
-
-    # Let them create a clan.
+def test_clan_skins(client: TestClient, user: dict):
+    # Create a clan.
     clan_name, clan_tag = "Zaitev's Snore Club", "Zzz"
     clan = client.post(
         "/v1/clan/register",
         json=dict(tag=clan_tag, name=clan_name),
-        auth=user_auth,
+        auth=user["auth"],
     ).json()
 
     # Add skin for clan
@@ -66,7 +52,7 @@ def test_clan_skins(client: TestClient):
 
     # Check that we're getting it back from the clan route.
     response = client.get(
-        "/v1/skin/for-clan/by-id", json=dict(clan_id=clan["id"]), auth=user_auth
+        "/v1/skin/for-clan/by-id", json=dict(clan_id=clan["id"]), auth=user["auth"]
     )
     assert dict_without_key(response.json()[0], "id") == dict(
         description=None, kind=kind, unit=unit, model_path=model_path
@@ -76,7 +62,7 @@ def test_clan_skins(client: TestClient):
     response = client.get(
         "/v1/skin/for-user/by-id",
         json=dict(user_id=user["id"], clan_id=clan["id"]),
-        auth=user_auth,
+        auth=user["auth"],
     )
     assert dict_without_key(response.json()[0], "id") == dict(
         description=None, kind=kind, unit=unit, model_path=model_path
@@ -86,6 +72,6 @@ def test_clan_skins(client: TestClient):
     response = client.get(
         "/v1/skin/for-user/by-id",
         json=dict(user_id=user["id"]),
-        auth=user_auth,
+        auth=user["auth"],
     )
     assert response.json() == []

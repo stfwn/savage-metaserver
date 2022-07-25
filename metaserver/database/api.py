@@ -82,6 +82,13 @@ def change_display_name(session: Session, user: User, display_name: str) -> User
     return user
 
 
+def set_user_verified_email(session: Session, user: User):
+    user.verified_email = datetime.utcnow()
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+
 ########
 # Clan #
 ########

@@ -38,6 +38,27 @@ def auth_user(
     user = db.get_user_by_username(session, credentials.username)
     supplied_key = hash_password(credentials.password, user.salt)
     if secrets.compare_digest(supplied_key, user.key):
+        if not user.verified_email:
+            raise HTTPException(
+                status.HTTP_401_UNAUTHORIZED,
+                detail="User email is unverified",
+                headers={"WWW-Authenticate": "Basic"},
+            )
+        return user
+    raise HTTPException(
+        status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect username or password",
+        headers={"WWW-Authenticate": "Basic"},
+    )
+
+
+def auth_unverified_user(
+    session: Session = Depends(db.get_session),
+    credentials: HTTPBasicCredentials = Depends(security),
+) -> User:
+    user = db.get_user_by_username(session, credentials.username)
+    supplied_key = hash_password(credentials.password, user.salt)
+    if secrets.compare_digest(supplied_key, user.key):
         return user
     raise HTTPException(
         status.HTTP_401_UNAUTHORIZED,
@@ -51,7 +72,7 @@ def generate_user_proof(user_id: int) -> str:
         (
             # Proofs are specific to users.
             str(user_id)
-            # Only the server can generate proofs.
+            # Only the server can generate proofs and proofs invalidate on restart.
             + constants.secret_for_user_proof
             # Proofs invalidate every day at 00:00 UTC.
             + datetime.utcnow().strftime("%Y-%m-%d")

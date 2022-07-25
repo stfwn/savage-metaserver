@@ -1,10 +1,11 @@
 from fastapi import Body, Depends, FastAPI, HTTPException, status
+from fastapi.responses import RedirectResponse
 from pydantic import Field, ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 import metaserver.database.api as db
-from metaserver import auth
+from metaserver import auth, email
 from metaserver.database.models import Clan, Skin, User, UserClanLink
 from metaserver.schemas import (
     ClanCreate,
@@ -98,10 +99,11 @@ def user_register(
     )
     try:
         user = db.create_user(session, user)
-        return UserReadWithProof(**user.dict(), proof=auth.generate_user_proof(user.id))
+        mail_token = email.generate_token(user.id)
+        email.send_verification_email(recipient=user.username, token=mail_token)
     except IntegrityError:
-        # The username is taken.
-        raise HTTPException(status.HTTP_409_CONFLICT)
+        raise HTTPException(status.HTTP_409_CONFLICT, "Username taken")
+    return UserReadWithProof(**user.dict(), proof=auth.generate_user_proof(user.id))
 
 
 @app.post("/v1/user/verify-clan-membership")
@@ -112,6 +114,47 @@ def user_verify_clan_membership(
     user: UserLogin = Depends(auth.auth_user),
 ):
     return db.user_is_clan_member(session, user, clan_id)
+
+
+@app.post("/v1/user/email/verify", response_model=UserReadWithProof)
+def user_email_verify(
+    mail_token: str = Body(embed=True, min_length=6, max_length=6),
+    *,
+    session: Session = Depends(db.get_session),
+    user: UserLogin = Depends(auth.auth_unverified_user),
+):
+    try:
+        if email.verify_token(user.id, mail_token):
+            db.set_user_verified_email(session, user)
+            return UserReadWithProof(
+                **user.dict(), proof=auth.generate_user_proof(user.id)
+            )
+        else:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, "Incorrect mail verification token"
+            )
+    except KeyError:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "No mail verification token found for user (request a new one)",
+        )
+
+
+@app.post("/v1/user/email/renew-token")
+def user_email_new_token(
+    *,
+    session: Session = Depends(db.get_session),
+    user: UserLogin = Depends(auth.auth_unverified_user),
+):
+    if user.verified_email:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "User already verified mail")
+    if email.get_token_age_for_user(user.id) <= 30:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Wait at least 30 sec before requesting a new token",
+        )
+    mail_token = email.generate_token(user.id)
+    email.send_verification_email(user.username, mail_token)
 
 
 @app.post("/v1/user/change-display-name", response_model=UserRead)
@@ -158,7 +201,9 @@ def clan_accept_invite(
     if db.user_is_invited_to_clan(session, user, clan_id):
         db.accept_clan_invite(session, user, clan_id)
     else:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED)
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED, "User is not invited to join clan"
+        )
 
 
 @app.post("/v1/clan/invite")
@@ -172,7 +217,7 @@ def clan_invite(
     if db.user_is_clan_admin(session, user, clan_id):
         db.invite_user_to_clan(session, user_id, clan_id)
     else:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED)
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User is not clan admin")
 
 
 @app.get("/v1/clan/invites")

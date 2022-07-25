@@ -54,7 +54,7 @@ class User(SQLModel, table=True):
     key: str
     salt: str
     created: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    verified: Optional[datetime]
+    verified_email: Optional[datetime]
     deleted: Optional[datetime]
     deleted_reason: Optional[str]
 

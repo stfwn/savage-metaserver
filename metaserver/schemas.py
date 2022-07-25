@@ -3,6 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field, SecretStr, ValidationError, validator
 
+from metaserver import email
+
 ########
 # User #
 ########
@@ -33,6 +35,12 @@ class UserCreate(BaseModel):
     username: EmailStr
     display_name: str = Field(min_length=1, max_length=64)
     password: SecretStr = Field(min_length=8, max_length=32)
+
+    @validator("username", pre=True, always=False)
+    def validate_username(cls, val):
+        if val.split("@")[-1] in email.domain_blacklist:
+            raise mail.DomainBlackListError("Username mail domain is in blacklist")
+        return val
 
 
 class UserLogin(BaseModel):
