@@ -29,7 +29,15 @@ Install the dependencies in a virtual env:
 2. Set the `DATABASE_URL` environment variable to a persistent database of your
    choosing. If it's unset the database is in-memory SQLite (gone when the
    process exists).
-3. Run `make serve` while in the virtual env (`source env/bin/activate`).
+3. Set the AWS credentials in the environment variables:
+
+   ```bash
+    AWS_ACCESS_KEY_ID=...
+    AWS_SECRET_ACCESS_KEY=...
+    AWS_DEFAULT_REGION=eu-central-1
+   ```
+
+4. Run `make serve` while in the virtual env (`source env/bin/activate`).
 
 ## FAQ
 
