@@ -183,25 +183,13 @@ def test_user_display_name(client: TestClient, user: dict):
     assert response.status_code == 422
 
 
-def test_user_proof(client: TestClient, user: dict, user2: dict):
-    # Verify user's proof using user's login.
+def test_user_proof(client: TestClient, user: dict):
+    # Verify user's proof.
     response = client.post(
         "/v1/user/verify-user-proof",
         json=dict(
             user_id=user["id"],
             user_proof=user["proof"],
         ),
-        auth=user["auth"],
-    )
-    assert response.json() == True
-
-    # Verify user's proof using user2's login.
-    response = client.post(
-        "/v1/user/verify-user-proof",
-        json=dict(
-            user_id=user["id"],
-            user_proof=user["proof"],
-        ),
-        auth=user2["auth"],
     )
     assert response.json() == True

@@ -82,7 +82,6 @@ def user_verify_user_proof(
     user_id: int = Body(embed=True),
     user_proof: str = Body(embed=True),
     *,
-    user: UserLogin = Depends(auth.auth_user),
     session: Session = Depends(db.get_session),
 ):
     """Verify user proof. See docstring for user login for more."""
