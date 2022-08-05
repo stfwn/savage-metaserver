@@ -44,6 +44,12 @@ def auth_user(
                 detail="User email is unverified",
                 headers={"WWW-Authenticate": "Basic"},
             )
+        if user.deleted:
+            raise HTTPException(
+                status.HTTP_401_UNAUTHORIZED,
+                detail="User is deleted",
+                headers={"WWW-Authenticate": "Basic"},
+            )
         return user
     raise HTTPException(
         status.HTTP_401_UNAUTHORIZED,
