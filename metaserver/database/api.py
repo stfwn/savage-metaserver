@@ -2,19 +2,25 @@ import os
 from datetime import datetime
 
 from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
 
 import metaserver.database.patch  # Bugfix in SQLModel
 from metaserver.database.models import Clan, Skin, User, UserClanLink, Server
 from metaserver.schemas import ClanCreate, ServerUpdate
 from metaserver import config
 
-engine = create_engine(
-    config.database_url,
-    echo=bool(os.environ.get("DEV", False)),
-)
+if config.database_url == "sqlite://":
+    engine = create_engine(
+        config.database_url,
+        connect_args={"check_same_thread": False},
+        echo=config.dev_mode,
+        poolclass=StaticPool,
+    )
+else:
+    engine = create_engine(config.database_url, echo=config.dev_mode)
 
 
-def init():
+def dev_mode_startup():
     SQLModel.metadata.create_all(engine)
 
 

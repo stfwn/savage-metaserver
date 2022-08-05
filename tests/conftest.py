@@ -18,6 +18,7 @@ def client():
         connect_args=dict(check_same_thread=False),
         poolclass=StaticPool,
     )
+    SQLModel.metadata.create_all(db.engine)
 
     with TestClient(app) as client:
         yield client

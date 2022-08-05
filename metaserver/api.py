@@ -26,7 +26,8 @@ app = FastAPI()
 
 @app.on_event("startup")
 def on_startup():
-    db.init()
+    if config.dev_mode:
+        db.dev_mode_startup()
 
 
 @app.get("/")
