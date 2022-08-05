@@ -7,3 +7,5 @@ typecheck:
 serve:
 	uvicorn metaserver.api:app --reload
 
+deploy:
+	docker compose up -d
