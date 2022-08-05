@@ -45,3 +45,21 @@ def user2(client: TestClient):
     username = "foo2@example.com"
     password = "12345678"
     return utils.register_user(client, username, password)
+
+
+@pytest.fixture
+def server(client: TestClient, user: dict):
+    server_create = dict(
+        host_name="https://example.com",
+        display_name="Zaitev's Snooze Server",
+        description="Welcome, grab a pillow.",
+        game_type="Snoozing",
+        max_player_count=42,
+    )
+    server_login = client.post(
+        "/v1/server/register",
+        json=server_create,
+        auth=user["auth"],
+    ).json()
+
+    return {"auth": (server_login["username"], server_login["password"])}

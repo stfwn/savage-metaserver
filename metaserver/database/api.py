@@ -5,8 +5,8 @@ from sqlmodel import Session, SQLModel, create_engine, select
 
 import metaserver.database.patch  # Bugfix in SQLModel
 from metaserver.database import constants
-from metaserver.database.models import Clan, Skin, User, UserClanLink
-from metaserver.schemas import ClanCreate
+from metaserver.database.models import Clan, Skin, User, UserClanLink, Server
+from metaserver.schemas import ClanCreate, ServerUpdate
 
 engine = create_engine(
     constants.database_url,
@@ -131,6 +131,35 @@ def invite_user_to_clan(session: Session, user_id: int, clan_id: int):
 def get_clan_members(session: Session, clan_id: int) -> list[User]:
     clan = get_clan_by_id(session, clan_id)
     return [link.user for link in clan.user_links]
+
+
+##########
+# Server #
+##########
+
+
+def create_server(session: Session, user: User, server: Server):
+    session.add(server)
+    session.commit()
+    session.refresh(server)
+    return server
+
+
+def get_server_by_id(session: Session, server_id: int) -> Server:
+    return session.exec(select(Server).where(Server.id == server_id)).one()
+
+
+def get_online_servers(session: Session, cutoff: datetime):
+    return session.exec(select(Server).where(Server.updated > cutoff)).all()
+
+
+def update_server(session: Session, server: Server, server_update: ServerUpdate):
+    for k, v in server_update:
+        setattr(server, k, v)
+    session.add(server)
+    session.commit()
+    session.refresh(server)
+    return server
 
 
 ########

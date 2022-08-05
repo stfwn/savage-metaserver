@@ -11,7 +11,7 @@ from sqlmodel import Session
 
 import metaserver.database.api as db
 from metaserver import constants
-from metaserver.database.models import User
+from metaserver.database.models import Server, User
 
 security = HTTPBasic()
 
@@ -67,6 +67,21 @@ def auth_unverified_user(
     )
 
 
+def auth_server(
+    session: Session = Depends(db.get_session),
+    credentials: HTTPBasicCredentials = Depends(security),
+) -> Server:
+    server = db.get_server_by_id(session, credentials.username)
+    supplied_key = hash_password(credentials.password, server.salt)
+    if secrets.compare_digest(supplied_key, server.key):
+        return server
+    raise HTTPException(
+        status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect username or password",
+        headers={"WWW-Authenticate": "Basic"},
+    )
+
+
 def generate_user_proof(user_id: int) -> str:
     return hashlib.sha256(
         (
@@ -82,3 +97,8 @@ def generate_user_proof(user_id: int) -> str:
 
 def verify_user_proof(user_id: int, user_proof: str) -> bool:
     return secrets.compare_digest(user_proof, generate_user_proof(user_id))
+
+
+def generate_server_password() -> SecretStr:
+    # 16 bytes -> 32 hex chars.
+    return SecretStr(secrets.token_hex(16))

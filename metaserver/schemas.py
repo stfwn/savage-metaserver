@@ -1,9 +1,20 @@
 import re
 from datetime import datetime
+from ipaddress import IPv4Address, IPv6Address
+from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field, SecretStr, ValidationError, validator
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    Field,
+    NonNegativeInt,
+    SecretStr,
+    ValidationError,
+    constr,
+    validator,
+)
 
-from metaserver import email
+from metaserver import email, utils
 
 ########
 # User #
@@ -58,10 +69,10 @@ class UserLogin(BaseModel):
 class ClanCreate(BaseModel):
     """Clan object when the outside world wants to create a new clan."""
 
-    tag: str
-    name: str
+    tag: constr(strip_whitespace=True, max_length=20)
+    name: constr(strip_whitespace=True, max_length=100)
 
-    @validator("tag")
+    @validator("tag", pre=True, always=False)
     def validate_tag(cls, v):
         max_colors = 4
         max_letters = 4
@@ -79,3 +90,38 @@ class ClanCreate(BaseModel):
             len(re.sub(r"\^[\d]{3}", "", v)) <= max_letters
         ), "Clan tags can contain at most 4 letters"
         return v
+
+
+##########
+# Server #
+##########
+
+
+class ServerLogin(BaseModel):
+    username: str = Field(min_length=1, max_length=8)
+    password: SecretStr = Field(min_length=32, max_length=32)
+
+    class Config:
+        json_encoders = {SecretStr: lambda v: v.get_secret_value() if v else None}
+
+
+class ServerCreate(BaseModel):
+    host_name: utils.HttpsUrl | IPv4Address | IPv6Address
+    display_name: constr(strip_whitespace=True, max_length=100)
+    description: Optional[constr(strip_whitespace=True, max_length=200)]
+    game_type: constr(strip_whitespace=True, max_length=10)
+    max_player_count: NonNegativeInt
+
+
+class ServerUpdate(ServerCreate):
+    current_player_count: NonNegativeInt
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        object.__setattr__(self, "updated", datetime.utcnow())
+
+
+class ServerRead(ServerCreate):
+    id: int
+    current_player_count: Optional[NonNegativeInt]
+    updated: Optional[datetime]

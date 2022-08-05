@@ -60,6 +60,7 @@ class User(SQLModel, table=True):
 
     clan_links: list[UserClanLink] = Relationship(back_populates="user")
     skin_links: list[UserSkinLink] = Relationship(back_populates="user")
+    servers: list["Server"] = Relationship(back_populates="user")
 
 
 class Clan(SQLModel, table=True):
@@ -82,3 +83,20 @@ class Skin(SQLModel, table=True):
 
     user_links: list[UserSkinLink] = Relationship(back_populates="skin")
     clan_links: list[ClanSkinLink] = Relationship(back_populates="skin")
+
+
+class Server(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    key: str
+    salt: str
+    host_name: str
+    display_name: str
+    description: str
+    game_type: str
+    current_player_count: int = 0
+    max_player_count: int
+    created: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    updated: Optional[datetime]
+
+    user_id: int = Field(default=None, foreign_key="user.id")
+    user: User = Relationship(back_populates="servers")

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import Body, Depends, FastAPI, HTTPException, status
 from fastapi.responses import RedirectResponse
 from pydantic import Field, ValidationError
@@ -5,10 +7,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 import metaserver.database.api as db
-from metaserver import auth, email
-from metaserver.database.models import Clan, Skin, User, UserClanLink
+from metaserver import auth, config, email
+from metaserver.database.models import Clan, Skin, User, UserClanLink, Server
 from metaserver.schemas import (
     ClanCreate,
+    ServerLogin,
+    ServerCreate,
+    ServerRead,
+    ServerUpdate,
     UserCreate,
     UserLogin,
     UserRead,
@@ -281,3 +287,62 @@ def skin_for_clan_by_id(
     user: UserLogin = Depends(auth.auth_user),
 ):
     return db.get_skins_for_clan_by_id(session, clan_id)
+
+
+##############
+# /v1/server #
+##############
+
+
+@app.post("/v1/server/register", response_model=ServerLogin)
+def server_register(
+    new_server: ServerCreate,
+    *,
+    session: Session = Depends(db.get_session),
+    user: UserLogin = Depends(auth.auth_user),
+):
+    if len(user.servers) >= config.max_servers_per_user:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"User has reached the max number of servers of {config.max_servers_per_user}",
+        )
+
+    try:
+        password = auth.generate_server_password()
+        key, salt = auth.new_password(password)
+        new_server = Server(**new_server.dict(), user=user, key=key, salt=salt)
+        server = db.create_server(session, user, new_server)
+        return ServerLogin(username=server.id, password=password.get_secret_value())
+    except ValidationError:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+
+@app.get("/v1/server/list/my", response_model=list[ServerRead])
+def server_list_my(
+    *,
+    session: Session = Depends(db.get_session),
+    user: UserLogin = Depends(auth.auth_user),
+):
+    return user.servers
+
+
+@app.get("/v1/server/list/online", response_model=list[ServerRead])
+def server_list_online(
+    *,
+    session: Session = Depends(db.get_session),
+    user: UserLogin = Depends(auth.auth_user),
+):
+    return db.get_online_servers(
+        session,
+        cutoff=datetime.utcnow() - config.server_online_cutoff,
+    )
+
+
+@app.post("/v1/server/update", response_model=ServerRead)
+def server_update(
+    server_update: ServerUpdate,
+    *,
+    session: Session = Depends(db.get_session),
+    server: ServerLogin = Depends(auth.auth_server),
+):
+    return db.update_server(session, server, server_update)
