@@ -66,19 +66,16 @@ alembic upgrade head
 
 ## Deployment
 
-1. Activate the virtual env (`source env/bin/activate`)
-2. Set the `DATABASE_URL` environment variable to a persistent database of your
-   choosing. If it's unset the database is in-memory SQLite (gone when the
-   process exists).
-3. Set the AWS credentials in the environment variables:
+1. Clone the repository.
+2. Configure the environment variables:
 
    ```bash
     AWS_ACCESS_KEY_ID=...
     AWS_SECRET_ACCESS_KEY=...
     AWS_DEFAULT_REGION=eu-central-1
+    DATABASE_URL="sqlite:///metaserver.db"
    ```
-
-4. Run `make serve` while in the virtual env (`source env/bin/activate`).
+3. Run with `docker compose up --build --detach`
 
 ## FAQ
 

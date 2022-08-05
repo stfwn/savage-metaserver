@@ -178,7 +178,7 @@ def user_change_display_name(
 ############
 
 
-@app.get("v1/clan/all", response_model=list[Clan])
+@app.get("/v1/clan/all", response_model=list[Clan])
 def clan(
     *,
     session: Session = Depends(db.get_session),
