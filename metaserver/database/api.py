@@ -4,12 +4,12 @@ from datetime import datetime
 from sqlmodel import Session, SQLModel, create_engine, select
 
 import metaserver.database.patch  # Bugfix in SQLModel
-from metaserver.database import constants
 from metaserver.database.models import Clan, Skin, User, UserClanLink, Server
 from metaserver.schemas import ClanCreate, ServerUpdate
+from metaserver import config
 
 engine = create_engine(
-    constants.database_url,
+    config.database_url,
     echo=bool(os.environ.get("DEV", False)),
 )
 
