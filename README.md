@@ -50,6 +50,20 @@ Install the dependencies in a virtual env:
 5. Implement things in `metaserver/`.
 6. GOTO 4.
 
+### Migrations
+
+Autogenerating migrations:
+
+```bash
+alembic revision --autogenerate -m "My migration message"
+```
+
+Applying migrations:
+
+```bash
+alembic upgrade head
+```
+
 ## Deployment
 
 1. Activate the virtual env (`source env/bin/activate`)

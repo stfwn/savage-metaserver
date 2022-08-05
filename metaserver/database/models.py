@@ -97,6 +97,8 @@ class Server(SQLModel, table=True):
     max_player_count: int
     created: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated: Optional[datetime]
+    deleted: Optional[datetime]
+    deleted_reason: Optional[str]
 
     user_id: int = Field(default=None, foreign_key="user.id")
     user: User = Relationship(back_populates="servers")
