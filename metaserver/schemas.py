@@ -114,6 +114,7 @@ class ServerCreate(BaseModel):
 
 
 class ServerUpdate(ServerCreate):
+    current_map: str
     current_player_count: NonNegativeInt
 
     def __init__(self, **kwargs):
@@ -123,5 +124,6 @@ class ServerUpdate(ServerCreate):
 
 class ServerRead(ServerCreate):
     id: int
-    current_player_count: Optional[NonNegativeInt]
+    current_map: str
+    current_player_count: NonNegativeInt
     updated: Optional[datetime]

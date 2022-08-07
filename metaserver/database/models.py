@@ -94,6 +94,7 @@ class Server(SQLModel, table=True):
     description: str
     game_type: str
     current_player_count: int = 0
+    current_map: str = ""
     max_player_count: int
     created: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated: Optional[datetime]

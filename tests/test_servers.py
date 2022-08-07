@@ -66,6 +66,7 @@ def test_server_list_and_update(client: TestClient, user: dict, server: dict):
         display_name="Zaitev's updated snooze server",
         description="Grab an updated pillow.",
         game_type="Snoozing",
+        current_map="Zmap",
         current_player_count=40,
         max_player_count=42,
     )
