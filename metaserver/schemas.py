@@ -15,6 +15,7 @@ from pydantic import (
 )
 
 from metaserver import email, utils
+from metaserver.database.models import UserClanLink
 
 ########
 # User #

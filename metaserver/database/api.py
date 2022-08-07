@@ -78,6 +78,8 @@ def accept_clan_invite(session: Session, user: User, clan_id: int):
     for clan_link in user.clan_links:
         if clan_link.clan.id == clan_id and not (clan_link.joined or clan_link.deleted):
             clan_link.joined = datetime.utcnow()
+            session.add(clan_link)
+    session.commit()
 
 
 def change_display_name(session: Session, user: User, display_name: str) -> User:
@@ -136,7 +138,7 @@ def invite_user_to_clan(session: Session, user_id: int, clan_id: int):
 
 def get_clan_members(session: Session, clan_id: int) -> list[User]:
     clan = get_clan_by_id(session, clan_id)
-    return [link.user for link in clan.user_links]
+    return [link for link in clan.user_links if (link.joined and not link.deleted)]
 
 
 ##########

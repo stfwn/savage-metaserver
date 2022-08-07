@@ -226,7 +226,7 @@ def clan_invite(
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User is not clan admin")
 
 
-@app.get("/v1/clan/invites")
+@app.get("/v1/clan/invites", response_model=list[UserClanLink])
 def clan_invites(
     clan_id: int = Body(embed=True),
     *,
@@ -237,14 +237,18 @@ def clan_invites(
         return db.get_clan_user_invites(session, clan_id)
 
 
-@app.get("/v1/clan/members", response_model=list[UserRead])
+@app.get("/v1/clan/members", response_model=list[UserClanLink])
 def clan_members(
     clan_id: int = Body(embed=True),
     *,
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
-    return db.get_clan_members(session, clan_id)
+    user_clan_links = db.get_clan_members(session, clan_id)
+    return user_clan_links
+    return [
+        ClanMembershipRead(user=ucl.user, user_clan_link=ucl) for ucl in user_clan_links
+    ]
 
 
 @app.post("/v1/clan/register", response_model=Clan)

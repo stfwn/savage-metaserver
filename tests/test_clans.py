@@ -29,7 +29,7 @@ def test_clan_registration(client: TestClient, user: dict):
         json=dict(clan_id=clan["id"]),
         auth=user["auth"],
     )
-    assert response.json()[0]["display_name"] == user["display_name"]
+    assert response.json()[0]["user_id"] == user["id"]
 
     # Register a new clan with an illegal name.
     response = client.post(
@@ -80,7 +80,7 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict):
         json=dict(clan_id=clan["id"]),
         auth=nonadmin["auth"],
     )
-    assert response.json() == [dict_without_key(admin, "auth")]
+    assert [l["user_id"] for l in response.json()] == [admin["id"]]
 
     # Admin is a member
     response = client.post(
@@ -136,9 +136,8 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict):
         json=dict(clan_id=clan["id"]),
         auth=nonadmin["auth"],
     )
-    assert sorted(response.json(), key=lambda u: u["id"]) == sorted(
-        [dict_without_key(admin, "auth"), dict_without_key(nonadmin, "auth")],
-        key=lambda u: u["id"],
+    assert sorted([l["user_id"] for l in response.json()]) == sorted(
+        [admin["id"], nonadmin["id"]]
     )
 
     # Regular member can't invite people.
