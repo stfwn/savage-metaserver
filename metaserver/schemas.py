@@ -124,6 +124,6 @@ class ServerUpdate(ServerCreate):
 
 class ServerRead(ServerCreate):
     id: int
-    current_map: str
+    current_map: constr(max_length=100)
     current_player_count: NonNegativeInt
     updated: Optional[datetime]
