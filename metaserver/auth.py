@@ -10,7 +10,7 @@ from pydantic import SecretStr
 from sqlmodel import Session
 
 import metaserver.database.api as db
-from metaserver import constants
+from metaserver import config, constants
 from metaserver.database.models import Server, User
 
 security = HTTPBasic()
@@ -95,8 +95,8 @@ def generate_user_proof(user_id: int) -> str:
             str(user_id)
             # Only the server can generate proofs and proofs invalidate on restart.
             + constants.secret_for_user_proof
-            # Proofs invalidate every day at 00:00 UTC.
-            + datetime.utcnow().strftime("%Y-%m-%d")
+            # Proofs invalidate periodically.
+            + datetime.utcnow().strftime(config.proof_datetime_component_format)
         ).encode("utf-8")
     ).hexdigest()
 
