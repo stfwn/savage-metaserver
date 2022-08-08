@@ -46,7 +46,7 @@ def generate_token(user_id: int) -> str:
         pass
 
     # Generate new token
-    token = secrets.token_urlsafe(4)  # 4 bytes -> token has length 6
+    token = secrets.token_urlsafe(4).upper()  # 4 bytes -> token has length 6
     TOKEN_CACHE[token] = user_id
     TOKEN_CACHE_REVERSE[user_id] = token
     GENERATION_TIME_FOR_USER_ID[user_id] = time.monotonic()
