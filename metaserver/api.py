@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import Body, Depends, FastAPI, HTTPException, status
+from fastapi import BackgroundTasks, Body, Depends, FastAPI, HTTPException, status
 from fastapi.responses import RedirectResponse
 from pydantic import Field, ValidationError
 from sqlalchemy.exc import IntegrityError
@@ -61,7 +61,11 @@ def user_clan_invites(
 
 
 @app.post("/v1/user/login", response_model=UserReadWithProof)
-def user_login(*, user: UserLogin = Depends(auth.auth_user)):
+def user_login(
+    *,
+    user: UserLogin = Depends(auth.auth_user),
+    session: Session = Depends(db.get_session),
+):
     """Verify user credentials and obtain a user proof token. The user provides
     this token to a third party (like a game server) to prove that they are
     registered with this meta server. The third party then verifies this token
@@ -74,7 +78,8 @@ def user_login(*, user: UserLogin = Depends(auth.auth_user)):
     requests to this route after a token invalidation event overwhelms the
     server, but if this happens the system should be expanded so that each user
     should receive their own TTL token."""
-    user_proof = auth.generate_user_proof(user.id)  # type: ignore
+    db.set_user_last_online_now(session, user)
+    user_proof = auth.generate_user_proof(user.id)
     return UserReadWithProof(**user.dict(), proof=user_proof)
 
 
@@ -83,10 +88,14 @@ def user_verify_user_proof(
     user_id: int = Body(embed=True),
     user_proof: str = Body(embed=True),
     *,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(db.get_session),
 ):
     """Verify user proof. See docstring for user login for more."""
-    return auth.verify_user_proof(user_id, user_proof)
+    if auth.verify_user_proof(user_id, user_proof):
+        background_tasks.add_task(db.set_user_last_online_now_by_id, session, user_id)
+        return True
+    return False
 
 
 @app.post("/v1/user/register", response_model=UserReadWithProof)
@@ -126,12 +135,14 @@ def user_verify_clan_membership(
 def user_email_verify(
     mail_token: str = Body(embed=True, min_length=6, max_length=6),
     *,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_unverified_user),
 ):
     try:
         if email.verify_token(user.id, mail_token):
             db.set_user_verified_email(session, user)
+            background_tasks.add_task(db.set_user_last_online_now, session, user)
             return UserReadWithProof(
                 **user.dict(), proof=auth.generate_user_proof(user.id)
             )

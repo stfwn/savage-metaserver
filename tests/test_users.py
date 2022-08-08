@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 
 from metaserver import email
-from tests.utils import dict_without_key
 
 
 def test_user_registration(client: TestClient):
@@ -49,7 +48,7 @@ def test_user_registration(client: TestClient):
         json=dict(user_id=user["id"]),
         auth=(username, correct_pw),
     )
-    assert response.json() == dict_without_key(user, "proof")
+    assert response.json()["id"] == user["id"]
 
     # Register a new user with taken username.
     response = client.post(
@@ -171,7 +170,7 @@ def test_user_display_name(client: TestClient, user: dict):
     response = client.get(
         "/v1/user/by-id", json=dict(user_id=user["id"]), auth=user["auth"]
     )
-    assert response.json() == dict_without_key(dict_without_key(user, "proof"), "auth")
+    assert response.json()["display_name"] == user["display_name"]
 
     # Attempt to change to a display name that is too long
     new_display_name *= 80
@@ -184,6 +183,11 @@ def test_user_display_name(client: TestClient, user: dict):
 
 
 def test_user_proof(client: TestClient, user: dict):
+    # Get user's last online datetime
+    last_online_0 = client.get(
+        "/v1/user/by-id", json=dict(user_id=user["id"]), auth=user["auth"]
+    ).json()["last_online"]
+
     # Verify user's proof.
     response = client.post(
         "/v1/user/verify-user-proof",
@@ -193,3 +197,25 @@ def test_user_proof(client: TestClient, user: dict):
         ),
     )
     assert response.json() == True
+
+    # Check that last online datetime was updated
+    last_online_1 = client.get(
+        "/v1/user/by-id", json=dict(user_id=user["id"]), auth=user["auth"]
+    ).json()["last_online"]
+    assert last_online_1 > last_online_0
+
+    # Try to verify a wrong proof.
+    response = client.post(
+        "/v1/user/verify-user-proof",
+        json=dict(
+            user_id=user["id"],
+            user_proof="blerb",
+        ),
+    )
+    assert response.json() == False
+
+    # Check that last online datetime was not updated
+    last_online_2 = client.get(
+        "/v1/user/by-id", json=dict(user_id=user["id"]), auth=user["auth"]
+    ).json()["last_online"]
+    assert last_online_2 == last_online_1

@@ -90,6 +90,18 @@ def change_display_name(session: Session, user: User, display_name: str) -> User
     return user
 
 
+def set_user_last_online_now(session: Session, user: User):
+    user.last_online = datetime.utcnow()
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+
+def set_user_last_online_now_by_id(session: Session, user_id: int):
+    user = get_user_by_id(session, user_id)
+    set_user_last_online_now(session, user)
+
+
 def set_user_verified_email(session: Session, user: User):
     user.verified_email = datetime.utcnow()
     session.add(user)

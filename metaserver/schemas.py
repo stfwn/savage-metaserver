@@ -29,15 +29,13 @@ class UserRead(BaseModel):
     id: int
     display_name: str
     created: datetime
+    last_online: Optional[datetime]
 
 
-class UserReadWithProof(BaseModel):
+class UserReadWithProof(UserRead):
     """Object that is returned when a user logs in. Only return this to users
     that are authorized as the user that this object refers to."""
 
-    id: int
-    display_name: str
-    created: datetime
     proof: str
 
 

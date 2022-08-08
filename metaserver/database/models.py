@@ -57,6 +57,7 @@ class User(SQLModel, table=True):
     verified_email: Optional[datetime]
     deleted: Optional[datetime]
     deleted_reason: Optional[str]
+    last_online: Optional[datetime]
 
     clan_links: list[UserClanLink] = Relationship(back_populates="user")
     skin_links: list[UserSkinLink] = Relationship(back_populates="user")
