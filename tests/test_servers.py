@@ -10,7 +10,7 @@ def test_server_registration(client: TestClient, user: dict):
         host_name="https://example.com",
         display_name="Zaitev's Snooze Server",
         description="Welcome, grab a pillow.",
-        game_type="Snoozing",
+        game_type="RTSS",
         max_player_count=42,
     )
 
@@ -29,6 +29,14 @@ def test_server_registration(client: TestClient, user: dict):
         auth=user["auth"],
     )
     assert resp.status_code == 422
+
+    # IPv4 host name
+    resp = client.post(
+        "/v1/server/register",
+        json=server_create | {"host_name": "118.62.243.19"},
+        auth=user["auth"],
+    )
+    assert resp.status_code == 200
 
     # OK
     resp = client.post(

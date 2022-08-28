@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 
 from fastapi import BackgroundTasks, Body, Depends, FastAPI, HTTPException, status
 from fastapi.responses import RedirectResponse
@@ -339,7 +340,11 @@ def server_register(
     try:
         password = auth.generate_server_password()
         key, salt = auth.new_password(password)
-        new_server = Server(**new_server.dict(), user=user, key=key, salt=salt)
+        # Round trip to json is a workaround for pydantic not having a
+        # hook to provide custom serializers for .dict()
+        new_server = Server(
+            **json.loads(new_server.json()), user=user, key=key, salt=salt
+        )
         server = db.create_server(session, user, new_server)
         return ServerLogin(username=server.id, password=password.get_secret_value())
     except ValidationError:
