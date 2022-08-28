@@ -70,16 +70,17 @@ def test_server_list_and_update(client: TestClient, user: dict, server: dict):
     assert resp.status_code == 200
     assert resp.json() == []
 
-    server_update = dict(
-        host_name="https://example2.com",
-        port=11235,
-        display_name="Zaitev's updated snooze server",
-        description="Grab an updated pillow.",
-        game_type="Snoozing",
-        current_map="Zmap",
-        current_player_count=40,
-        max_player_count=42,
-    )
+    server_update = {
+        "host_name": "10.0.0.67",
+        "port": 11235,
+        "display_name": "^mUnnamed ^900DRX ^mServer",
+        "description": "",
+        "game_type": "RTSS",
+        "max_player_count": 32,
+        "current_player_count": 1,
+        "current_map": "eden2",
+    }
+
     resp = client.post("/v1/server/update", json=server_update, auth=server["auth"])
     assert resp.status_code == 200
 

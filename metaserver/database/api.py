@@ -170,6 +170,8 @@ def get_online_servers(session: Session, cutoff: datetime):
 
 def update_server(session: Session, server: Server, server_update: ServerUpdate):
     for k, v in server_update:
+        if k == 'host_name':
+            v = str(v)
         setattr(server, k, v)
     session.add(server)
     session.commit()
