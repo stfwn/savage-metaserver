@@ -28,12 +28,12 @@ def test_user_skins(client: TestClient, user: dict):
     )
 
 
-def test_clan_skins(client: TestClient, user: dict):
+def test_clan_skins(client: TestClient, user: dict, clan_icon: str):
     # Create a clan.
     clan_name, clan_tag = "Zaitev's Snore Club", "Zzz"
     clan = client.post(
         "/v1/clan/register",
-        json=dict(tag=clan_tag, name=clan_name),
+        json=dict(tag=clan_tag, name=clan_name, icon=clan_icon),
         auth=user["auth"],
     ).json()
 

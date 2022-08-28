@@ -78,6 +78,7 @@ class Clan(SQLModel, table=True):
     name: str = Field(sa_column=Column("name", VARCHAR, unique=True, nullable=False))
     created: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     deleted: Optional[datetime]
+    icon: str
 
     user_links: list[UserClanLink] = Relationship(back_populates="clan")
     skin_links: list[ClanSkinLink] = Relationship(back_populates="clan")
@@ -99,6 +100,7 @@ class Server(SQLModel, table=True):
     key: str
     salt: str
     host_name: str
+    port: int
     display_name: str
     description: str
     game_type: str

@@ -8,6 +8,7 @@ from metaserver import config
 def test_server_registration(client: TestClient, user: dict):
     server_create = dict(
         host_name="https://example.com",
+        port=11235,
         display_name="Zaitev's Snooze Server",
         description="Welcome, grab a pillow.",
         game_type="RTSS",
@@ -30,7 +31,7 @@ def test_server_registration(client: TestClient, user: dict):
     )
     assert resp.status_code == 422
 
-    # IPv4 host name
+    # OK: IPv4 host name
     resp = client.post(
         "/v1/server/register",
         json=server_create | {"host_name": "118.62.243.19"},
@@ -71,6 +72,7 @@ def test_server_list_and_update(client: TestClient, user: dict, server: dict):
 
     server_update = dict(
         host_name="https://example2.com",
+        port=11235,
         display_name="Zaitev's updated snooze server",
         description="Grab an updated pillow.",
         game_type="Snoozing",

@@ -115,7 +115,7 @@ def set_user_verified_email(session: Session, user: User):
 
 
 def create_clan(session: Session, user: User, new_clan: ClanCreate) -> Clan:
-    clan = Clan(tag=new_clan.tag, name=new_clan.name)
+    clan = Clan(**new_clan.dict())
     link = UserClanLink(user=user, clan=clan, is_admin=True, joined=datetime.utcnow())
     session.add(link)
     session.commit()

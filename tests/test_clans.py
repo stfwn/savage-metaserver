@@ -3,12 +3,12 @@ from fastapi.testclient import TestClient
 from tests.utils import dict_without_key
 
 
-def test_clan_registration(client: TestClient, user: dict):
+def test_clan_registration(client: TestClient, user: dict, clan_icon: str):
     # Register a new clan.
     clan_name, clan_tag = "Zaitev's Snore Club", "Zzz"
     response = client.post(
         "/v1/clan/register",
-        json=dict(tag=clan_tag, name=clan_name),
+        json=dict(tag=clan_tag, name=clan_name, icon=clan_icon),
         auth=user["auth"],
     )
     assert response.status_code == 200
@@ -34,20 +34,22 @@ def test_clan_registration(client: TestClient, user: dict):
     # Register a new clan with an illegal name.
     response = client.post(
         "/v1/clan/register",
-        json=dict(tag="^900" * 5, name="Zaitev's Snore Club"),
+        json=dict(tag="^900" * 5, name="Zaitev's Snore Club", icon=clan_icon),
         auth=user["auth"],
     )
     assert response.status_code == 422
 
 
-def test_clan_invitation(client: TestClient, user: dict, user2: dict):
+def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon: str):
     # Setup
     clan_name, clan_tag = "Zaitev's Snore Club", "Zzz"
 
     admin = dict_without_key(user, "proof")
     nonadmin = dict_without_key(user2, "proof")
     clan = client.post(
-        "/v1/clan/register", json=dict(tag=clan_tag, name=clan_name), auth=admin["auth"]
+        "/v1/clan/register",
+        json=dict(tag=clan_tag, name=clan_name, icon=clan_icon),
+        auth=admin["auth"],
     ).json()
 
     # Outsider can't invite people.

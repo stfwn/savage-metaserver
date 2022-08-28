@@ -1,8 +1,12 @@
-import re
+import base64
+import binascii
 from datetime import datetime
+import io
 from ipaddress import IPv4Address, IPv6Address
+import re
 from typing import Optional
 
+from PIL import Image
 from pydantic import (
     BaseModel,
     EmailStr,
@@ -67,6 +71,7 @@ class UserLogin(BaseModel):
 class ClanCreate(BaseModel):
     """Clan object when the outside world wants to create a new clan."""
 
+    icon: str  # Base64 PNG
     tag: constr(strip_whitespace=True, max_length=20)
     name: constr(strip_whitespace=True, max_length=100)
 
@@ -89,6 +94,22 @@ class ClanCreate(BaseModel):
         ), "Clan tags can contain at most 4 letters"
         return v
 
+    @validator("icon")
+    def validate_icon(cls, v):
+        try:
+            img_bytes = base64.b64decode(v)
+            img = Image.open(io.BytesIO(img_bytes))
+            img.verify()
+        except (TypeError, binascii.Error, ValueError, OSError, IOError) as e:
+            raise ValueError("Image could not be validated")
+        if img.format.lower() != "png":
+            raise ValueError("Image should be in PNG format")
+        if img.size[0] > 64 or img.size[1] > 64:
+            raise ValueError("Image is too large")
+        if img.size[0] != img.size[1]:
+            raise ValueError("Image should be square")
+        return v
+
 
 ##########
 # Server #
@@ -105,6 +126,7 @@ class ServerLogin(BaseModel):
 
 class ServerCreate(BaseModel):
     host_name: utils.HttpsUrl | IPv4Address | IPv6Address
+    port: int
     display_name: constr(strip_whitespace=True, max_length=100)
     description: Optional[constr(strip_whitespace=True, max_length=200)]
     game_type: constr(strip_whitespace=True, max_length=10)

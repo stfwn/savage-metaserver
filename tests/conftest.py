@@ -52,6 +52,7 @@ def user2(client: TestClient):
 def server(client: TestClient, user: dict):
     server_create = dict(
         host_name="https://example.com",
+        port=11235,
         display_name="Zaitev's Snooze Server",
         description="Welcome, grab a pillow.",
         game_type="Snoozing",
@@ -64,3 +65,8 @@ def server(client: TestClient, user: dict):
     ).json()
 
     return {"auth": (server_login["username"], server_login["password"])}
+
+
+@pytest.fixture
+def clan_icon():
+    return "iVBORw0KGgoAAAANSUhEUgAAAEAAAABAAQMAAACQp+OdAAAAA1BMVEX///+nxBvIAAAAD0lEQVR4nGNgGAWjgHwAAAJAAAFZNqEDAAAAAElFTkSuQmCC"
