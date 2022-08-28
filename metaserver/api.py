@@ -208,6 +208,20 @@ def clan_by_id(
     return db.get_clan_by_id(session, clan_id)
 
 
+@app.get("/v1/clan/for-user/by-id", response_model=list[UserClanLink])
+def clan_for_user_by_id(
+    user_id: int = Body(embed=True),
+    *,
+    session: Session = Depends(db.get_session),
+    user: UserLogin = Depends(auth.auth_user),
+):
+    return [
+        link
+        for link in db.get_clan_links_for_user_by_id(session, user_id)
+        if link.is_membership
+    ]
+
+
 @app.post("/v1/clan/accept-invite")
 def clan_accept_invite(
     clan_id: int = Body(embed=True),

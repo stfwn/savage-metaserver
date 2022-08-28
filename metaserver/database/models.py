@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlmodel import VARCHAR, Column, Field, Relationship, SQLModel, create_engine
+from sqlmodel import VARCHAR, Column, Field, JSON, Relationship, SQLModel, create_engine
 
 
 class UserClanLink(SQLModel, table=True):
@@ -19,6 +19,14 @@ class UserClanLink(SQLModel, table=True):
     invited: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     joined: Optional[datetime]
     deleted: Optional[datetime]
+
+    @property
+    def is_membership(self):
+        return self.joined and not self.deleted
+
+    @property
+    def is_open_invitation(self):
+        return not (self.joined or self.deleted)
 
 
 class ClanSkinLink(SQLModel, table=True):

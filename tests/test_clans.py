@@ -90,6 +90,16 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict):
     )
     assert response.json() == True
 
+    # The list of clans for admin includes this clan
+    response = client.get(
+        "/v1/clan/for-user/by-id",
+        json=dict(user_id=admin["id"]),
+        auth=admin["auth"],
+    )
+    r = response.json()
+    assert len(r) == 1
+    assert r[0]["user_id"] == admin["id"]
+
     # Non-admin is not a member
     response = client.post(
         "/v1/user/verify-clan-membership",

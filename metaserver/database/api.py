@@ -137,7 +137,12 @@ def get_clan_by_tag(session: Session, clan_tag: str) -> Clan:
 
 def get_clan_user_invites(session: Session, clan_id: int) -> list[UserClanLink]:
     clan = get_clan_by_id(session, clan_id)
-    return [link for link in clan.user_links if not (link.joined or link.deleted)]
+    return [link for link in clan.user_links if link.is_open_invitation]
+
+
+def get_clan_links_for_user_by_id(session: Session, user_id: int) -> list[Clan]:
+    user = get_user_by_id(session, user_id)
+    return [link for link in user.clan_links if link.is_membership]
 
 
 def invite_user_to_clan(session: Session, user_id: int, clan_id: int):
@@ -150,7 +155,7 @@ def invite_user_to_clan(session: Session, user_id: int, clan_id: int):
 
 def get_clan_members(session: Session, clan_id: int) -> list[User]:
     clan = get_clan_by_id(session, clan_id)
-    return [link for link in clan.user_links if (link.joined and not link.deleted)]
+    return [link for link in clan.user_links if link.is_membership]
 
 
 ##########
