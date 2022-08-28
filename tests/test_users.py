@@ -219,3 +219,15 @@ def test_user_proof(client: TestClient, user: dict):
         "/v1/user/by-id", json=dict(user_id=user["id"]), auth=user["auth"]
     ).json()["last_online"]
     assert last_online_2 == last_online_1
+
+
+def test_get_user_batch(client: TestClient, user: dict, user2: dict):
+    resp = client.get(
+        "/v1/user/by-id/batch",
+        json=dict(user_ids=[user["id"], user2["id"]]),
+        auth=user["auth"],
+    ).json()
+
+    assert type(resp) == list
+    assert len(resp) == 2
+    assert [u["id"] for u in resp] == [user["id"], user2["id"]]

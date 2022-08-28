@@ -52,13 +52,23 @@ def user(
     return db.get_user_by_id(session, user_id)
 
 
+@app.get("/v1/user/by-id/batch", response_model=list[UserRead])
+def user(
+    user_ids: list[int] = Body(embed=True),
+    *,
+    user: UserLogin = Depends(auth.auth_user),
+    session: Session = Depends(db.get_session),
+):
+    return db.get_users_by_id(session, user_ids)
+
+
 @app.get("/v1/user/clan-invites", response_model=list[UserClanLink])
 def user_clan_invites(
     *,
     user: UserLogin = Depends(auth.auth_user),
     session: Session = Depends(db.get_session),
 ):
-    return db.get_user_clan_invites(session, user)
+    return [link for link in user.clan_links if link.is_open_invitation]
 
 
 @app.post("/v1/user/login", response_model=UserReadWithProof)
@@ -216,11 +226,9 @@ def clan_for_user_by_id(
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
-    return [
-        link
-        for link in db.get_clan_links_for_user_by_id(session, user_id)
-        if link.is_membership
-    ]
+    if user_id != user.id:
+        user = db.get_user_by_id(session, user_id)
+    return [link for link in user.clan_links if link.is_membership]
 
 
 @app.post("/v1/clan/accept-invite")
@@ -270,11 +278,8 @@ def clan_members(
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
-    user_clan_links = db.get_clan_members(session, clan_id)
-    return user_clan_links
-    return [
-        ClanMembershipRead(user=ucl.user, user_clan_link=ucl) for ucl in user_clan_links
-    ]
+    clan = db.get_clan_by_id(session, clan_id)
+    return [link for link in clan.user_links if link.is_membership]
 
 
 @app.post("/v1/clan/register", response_model=Clan)
