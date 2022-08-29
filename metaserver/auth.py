@@ -8,6 +8,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import SecretStr
 from sqlmodel import Session
+from sqlalchemy.exc import NoResultFound
 
 import metaserver.database.api as db
 from metaserver import config, constants
@@ -62,10 +63,13 @@ def auth_unverified_user(
     session: Session = Depends(db.get_session),
     credentials: HTTPBasicCredentials = Depends(security),
 ) -> User:
-    user = db.get_user_by_username(session, credentials.username)
-    supplied_key = hash_password(credentials.password, user.salt)
-    if secrets.compare_digest(supplied_key, user.key):
-        return user
+    try:
+        user = db.get_user_by_username(session, credentials.username)
+        supplied_key = hash_password(credentials.password, user.salt)
+        if secrets.compare_digest(supplied_key, user.key):
+            return user
+    except NoResultFound:
+        pass
     raise HTTPException(
         status.HTTP_401_UNAUTHORIZED,
         detail="Incorrect username or password",
@@ -77,10 +81,13 @@ def auth_server(
     session: Session = Depends(db.get_session),
     credentials: HTTPBasicCredentials = Depends(security),
 ) -> Server:
-    server = db.get_server_by_id(session, credentials.username)
-    supplied_key = hash_password(credentials.password, server.salt)
-    if secrets.compare_digest(supplied_key, server.key):
-        return server
+    try:
+        server = db.get_server_by_id(session, credentials.username)
+        supplied_key = hash_password(credentials.password, server.salt)
+        if secrets.compare_digest(supplied_key, server.key):
+            return server
+    except NoResultFound:
+        pass
     raise HTTPException(
         status.HTTP_401_UNAUTHORIZED,
         detail="Incorrect username or password",
