@@ -150,6 +150,8 @@ def user_email_verify(
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_unverified_user),
 ):
+    if user.verified_email:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "User already verified mail")
     try:
         if email.verify_token(user.id, mail_token):
             db.set_user_verified_email(session, user)
