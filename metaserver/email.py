@@ -62,9 +62,12 @@ def get_user_id_for_verification_token(token: str) -> int:
     return user_id
 
 
-def get_token_age_for_user(user_id: int) -> int:
+def get_token_age_for_user(user_id: int) -> int | float:
     """Get how long ago a token was generated in seconds."""
-    return int(time.monotonic() - GENERATION_TIME_FOR_USER_ID[user_id])
+    try:
+        return int(time.monotonic() - GENERATION_TIME_FOR_USER_ID[user_id])
+    except KeyError:
+        return float("inf")
 
 
 def send_verification_email(recipient: str, token: str):

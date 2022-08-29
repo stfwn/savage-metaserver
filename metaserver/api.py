@@ -179,10 +179,11 @@ def user_email_new_token(
     if email.get_token_age_for_user(user.id) <= 30:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
-            "Wait at least 30 sec before requesting a new token",
+            "Wait at least 30 seconds before requesting a new token",
         )
     mail_token = email.generate_token(user.id)
     email.send_verification_email(user.username, mail_token)
+    return "Token sent"
 
 
 @app.post("/v1/user/change-display-name", response_model=UserRead)
