@@ -36,22 +36,22 @@ def auth_user(
     session: Session = Depends(db.get_session),
     credentials: HTTPBasicCredentials = Depends(security),
 ) -> User:
-    user = db.get_user_by_username(session, credentials.username)
-    supplied_key = hash_password(credentials.password, user.salt)
-    if secrets.compare_digest(supplied_key, user.key):
-        if not user.verified_email:
-            raise HTTPException(
-                status.HTTP_401_UNAUTHORIZED,
-                detail="User email is unverified",
-                headers={"WWW-Authenticate": "Basic"},
-            )
-        if user.deleted:
-            raise HTTPException(
-                status.HTTP_401_UNAUTHORIZED,
-                detail="User is deleted",
-                headers={"WWW-Authenticate": "Basic"},
-            )
-        return user
+    if user := db.get_user_by_username(session, credentials.username):
+        supplied_key = hash_password(credentials.password, user.salt)
+        if secrets.compare_digest(supplied_key, user.key):
+            if not user.verified_email:
+                raise HTTPException(
+                    status.HTTP_401_UNAUTHORIZED,
+                    detail="User email is unverified",
+                    headers={"WWW-Authenticate": "Basic"},
+                )
+            if user.deleted:
+                raise HTTPException(
+                    status.HTTP_401_UNAUTHORIZED,
+                    detail="User is deleted",
+                    headers={"WWW-Authenticate": "Basic"},
+                )
+            return user
     raise HTTPException(
         status.HTTP_401_UNAUTHORIZED,
         detail="Incorrect username or password",
