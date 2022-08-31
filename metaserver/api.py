@@ -178,10 +178,10 @@ def user_email_new_token(
 ):
     if user.verified_email:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "User already verified mail")
-    if email.get_token_age_for_user(user.id) <= 30:
+    if email.get_token_age_for_user(user.id) <= config.email_token_renew_timeout:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
-            "Wait at least 30 seconds before requesting a new token",
+            f"Wait at least {config.email_token_renew_timeout} seconds before requesting a new token",
         )
     mail_token = email.generate_token(user.id)
     email.send_verification_email(user.username, mail_token)
