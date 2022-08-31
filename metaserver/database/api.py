@@ -17,7 +17,11 @@ if config.database_url == "sqlite://":
         poolclass=StaticPool,
     )
 else:
-    engine = create_engine(config.database_url, echo=config.dev_mode)
+    engine = create_engine(
+        config.database_url,
+        echo=config.dev_mode,
+        connect_args={"check_same_thread": False},
+    )
 
 
 def dev_mode_startup():
