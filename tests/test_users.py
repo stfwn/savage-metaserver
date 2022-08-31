@@ -121,10 +121,8 @@ def test_user_mail_tokens(client: TestClient):
     assert "wait" in response.json()["detail"].lower()
 
     # Request new token
-    def get_big_number(user_id):
-        return 1_000_000
-
     old_mail_token = email.TOKEN_CACHE_REVERSE[user["id"]]
+    get_big_number = lambda user_id: 1_000_000
     email.get_token_age_for_user = get_big_number
     response = client.post("/v1/user/email/renew-token", auth=auth)
     assert response.status_code == 200

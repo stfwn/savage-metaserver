@@ -74,7 +74,7 @@ def test_server_list_and_update(client: TestClient, user: dict, server: dict):
         "host_name": "10.0.0.67",
         "port": 11235,
         "display_name": "^mUnnamed ^900DRX ^mServer",
-        "description": "",
+        "description": "This is a server that you can play on.",
         "game_type": "RTSS",
         "max_player_count": 32,
         "current_player_count": 1,
