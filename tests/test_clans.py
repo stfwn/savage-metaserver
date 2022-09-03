@@ -18,7 +18,7 @@ def test_clan_registration(client: TestClient, user: dict, clan_icon: str):
     # Get clan info
     response = client.get(
         "/v1/clan/by-id",
-        json=dict(clan_id=clan["id"]),
+        params=dict(clan_id=clan["id"]),
         auth=user["auth"],
     )
     assert clan == response.json()
@@ -26,7 +26,7 @@ def test_clan_registration(client: TestClient, user: dict, clan_icon: str):
     # Get clan members
     response = client.get(
         "/v1/clan/members",
-        json=dict(clan_id=clan["id"]),
+        params=dict(clan_id=clan["id"]),
         auth=user["auth"],
     )
     assert response.json()[0]["user_id"] == user["id"]
@@ -41,7 +41,7 @@ def test_clan_registration(client: TestClient, user: dict, clan_icon: str):
 
     response = client.get(
         "/v1/clan/by-id/batch",
-        json=dict(clan_ids=[1, 2]),
+        params=dict(clan_ids=[1, 2]),
         auth=user["auth"],
     ).json()
     assert type(response) is list
@@ -79,7 +79,7 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
     # There are (still) no invites.
     response = client.get(
         "/v1/clan/invites",
-        json=dict(clan_id=clan["id"]),
+        params=dict(clan_id=clan["id"]),
         auth=admin["auth"],
     )
     assert response.json() == []
@@ -87,7 +87,7 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
     # Admin is the only member.
     response = client.get(
         "/v1/clan/members",
-        json=dict(clan_id=clan["id"]),
+        params=dict(clan_id=clan["id"]),
         auth=nonadmin["auth"],
     )
     assert [l["user_id"] for l in response.json()] == [admin["id"]]
@@ -103,7 +103,7 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
     # The list of clans for admin includes this clan
     response = client.get(
         "/v1/clan/for-user/by-id",
-        json=dict(user_id=admin["id"]),
+        params=dict(user_id=admin["id"]),
         auth=admin["auth"],
     )
     r = response.json()
@@ -129,7 +129,7 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
     # Invites go through and can be viewed.
     response = client.get(
         "/v1/clan/invites",
-        json=dict(clan_id=clan["id"]),
+        params=dict(clan_id=clan["id"]),
         auth=admin["auth"],
     )
     assert [inv["user_id"] for inv in response.json()] == [nonadmin["id"]]
@@ -153,7 +153,7 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
     # Both admin and non-admin are now members.
     response = client.get(
         "/v1/clan/members",
-        json=dict(clan_id=clan["id"]),
+        params=dict(clan_id=clan["id"]),
         auth=nonadmin["auth"],
     )
     assert sorted([l["user_id"] for l in response.json()]) == sorted(

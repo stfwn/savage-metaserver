@@ -1,7 +1,15 @@
 from datetime import datetime
 import json
 
-from fastapi import BackgroundTasks, Body, Depends, FastAPI, HTTPException, status
+from fastapi import (
+    BackgroundTasks,
+    Body,
+    Depends,
+    FastAPI,
+    HTTPException,
+    Query,
+    status,
+)
 from fastapi.responses import RedirectResponse
 from pydantic import Field, ValidationError
 from sqlalchemy.exc import IntegrityError
@@ -44,7 +52,7 @@ def index():
 
 @app.get("/v1/user/by-id", response_model=UserRead)
 def user(
-    user_id: int = Body(embed=True),
+    user_id: int,
     *,
     user: UserLogin = Depends(auth.auth_user),
     session: Session = Depends(db.get_session),
@@ -53,8 +61,8 @@ def user(
 
 
 @app.get("/v1/user/by-id/batch", response_model=list[UserRead])
-def user(
-    user_ids: list[int] = Body(embed=True),
+def user_by_id_batch(
+    user_ids: list[int] = Query(),
     *,
     user: UserLogin = Depends(auth.auth_user),
     session: Session = Depends(db.get_session),
@@ -214,7 +222,7 @@ def clan(
 
 @app.get("/v1/clan/by-id", response_model=Clan)
 def clan_by_id(
-    clan_id: int = Body(embed=True),
+    clan_id: int,
     *,
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
@@ -223,8 +231,8 @@ def clan_by_id(
 
 
 @app.get("/v1/clan/by-id/batch", response_model=list[UserRead])
-def user(
-    clan_ids: list[int] = Body(embed=True),
+def clan_by_id_batch(
+    clan_ids: list[int] = Query(),
     *,
     user: UserLogin = Depends(auth.auth_user),
     session: Session = Depends(db.get_session),
@@ -234,7 +242,7 @@ def user(
 
 @app.get("/v1/clan/for-user/by-id", response_model=list[UserClanLink])
 def clan_for_user_by_id(
-    user_id: int = Body(embed=True),
+    user_id: int,
     *,
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
@@ -275,7 +283,7 @@ def clan_invite(
 
 @app.get("/v1/clan/invites", response_model=list[UserClanLink])
 def clan_invites(
-    clan_id: int = Body(embed=True),
+    clan_id: int,
     *,
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
@@ -286,7 +294,7 @@ def clan_invites(
 
 @app.get("/v1/clan/members", response_model=list[UserClanLink])
 def clan_members(
-    clan_id: int = Body(embed=True),
+    clan_id: int,
     *,
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
@@ -315,8 +323,8 @@ def clan_register(
 
 @app.get("/v1/skin/for-user/by-id", response_model=list[Skin])
 def skin_for_user_by_id(
-    user_id: int = Body(embed=True),
-    clan_id: int | None = Body(default=None, embed=True),
+    user_id: int = Query(),
+    clan_id: int | None = Query(None),
     *,
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
@@ -329,7 +337,7 @@ def skin_for_user_by_id(
 
 @app.get("/v1/skin/for-clan/by-id", response_model=list[Skin])
 def skin_for_clan_by_id(
-    clan_id: int = Body(embed=True),
+    clan_id: int,
     *,
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),

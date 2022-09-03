@@ -28,7 +28,7 @@ def test_user_registration(client: TestClient):
     user = response.json()
     response = client.get(
         "/v1/user/by-id",
-        json=dict(user_id=user["id"]),
+        params=dict(user_id=user["id"]),
         auth=(username, correct_pw),
     )
     assert response.status_code == 401
@@ -45,7 +45,7 @@ def test_user_registration(client: TestClient):
     # Check that the user can log in now by getting the user itself.
     response = client.get(
         "/v1/user/by-id",
-        json=dict(user_id=user["id"]),
+        params=dict(user_id=user["id"]),
         auth=(username, correct_pw),
     )
     assert response.json()["id"] == user["id"]
@@ -143,7 +143,7 @@ def test_user_mail_tokens(client: TestClient):
     # Check that their auth is functioning now
     response = client.get(
         "/v1/user/by-id",
-        json=dict(user_id=user["id"]),
+        params=dict(user_id=user["id"]),
         auth=auth,
     )
     assert response.status_code == 200
@@ -166,7 +166,7 @@ def test_user_display_name(client: TestClient, user: dict):
     # Verify that the change persisted.
     user["display_name"] = new_display_name
     response = client.get(
-        "/v1/user/by-id", json=dict(user_id=user["id"]), auth=user["auth"]
+        "/v1/user/by-id", params=dict(user_id=user["id"]), auth=user["auth"]
     )
     assert response.json()["display_name"] == user["display_name"]
 
@@ -183,7 +183,9 @@ def test_user_display_name(client: TestClient, user: dict):
 def test_user_proof(client: TestClient, user: dict):
     # Get user's last online datetime
     last_online_0 = client.get(
-        "/v1/user/by-id", json=dict(user_id=user["id"]), auth=user["auth"]
+        "/v1/user/by-id",
+        params=dict(user_id=user["id"]),
+        auth=user["auth"],
     ).json()["last_online"]
 
     # Verify user's proof.
@@ -198,7 +200,9 @@ def test_user_proof(client: TestClient, user: dict):
 
     # Check that last online datetime was updated
     last_online_1 = client.get(
-        "/v1/user/by-id", json=dict(user_id=user["id"]), auth=user["auth"]
+        "/v1/user/by-id",
+        params=dict(user_id=user["id"]),
+        auth=user["auth"],
     ).json()["last_online"]
     assert last_online_1 > last_online_0
 
@@ -214,7 +218,9 @@ def test_user_proof(client: TestClient, user: dict):
 
     # Check that last online datetime was not updated
     last_online_2 = client.get(
-        "/v1/user/by-id", json=dict(user_id=user["id"]), auth=user["auth"]
+        "/v1/user/by-id",
+        params=dict(user_id=user["id"]),
+        auth=user["auth"],
     ).json()["last_online"]
     assert last_online_2 == last_online_1
 
@@ -222,7 +228,7 @@ def test_user_proof(client: TestClient, user: dict):
 def test_get_user_batch(client: TestClient, user: dict, user2: dict):
     resp = client.get(
         "/v1/user/by-id/batch",
-        json=dict(user_ids=[user["id"], user2["id"]]),
+        params=dict(user_ids=[user["id"], user2["id"]]),
         auth=user["auth"],
     ).json()
 

@@ -21,7 +21,7 @@ def test_user_skins(client: TestClient, user: dict):
 
     # Check that we're getting it back from the route.
     response = client.get(
-        "/v1/skin/for-user/by-id", json=dict(user_id=user["id"]), auth=user["auth"]
+        "/v1/skin/for-user/by-id", params=dict(user_id=user["id"]), auth=user["auth"]
     )
     assert dict_without_key(response.json()[0], "id") == dict(
         description=None, kind=kind, unit=unit, model_path=model_path
@@ -52,7 +52,9 @@ def test_clan_skins(client: TestClient, user: dict, clan_icon: str):
 
     # Check that we're getting it back from the clan route.
     response = client.get(
-        "/v1/skin/for-clan/by-id", json=dict(clan_id=clan["id"]), auth=user["auth"]
+        "/v1/skin/for-clan/by-id",
+        params=dict(clan_id=clan["id"]),
+        auth=user["auth"],
     )
     assert dict_without_key(response.json()[0], "id") == dict(
         description=None, kind=kind, unit=unit, model_path=model_path
@@ -61,7 +63,7 @@ def test_clan_skins(client: TestClient, user: dict, clan_icon: str):
     # Check that we're getting it back from the user route if we ask for it.
     response = client.get(
         "/v1/skin/for-user/by-id",
-        json=dict(user_id=user["id"], clan_id=clan["id"]),
+        params=dict(user_id=user["id"], clan_id=clan["id"]),
         auth=user["auth"],
     )
     assert dict_without_key(response.json()[0], "id") == dict(
@@ -71,7 +73,7 @@ def test_clan_skins(client: TestClient, user: dict, clan_icon: str):
     # Check that we're not getting it back from the user route if we don't ask.
     response = client.get(
         "/v1/skin/for-user/by-id",
-        json=dict(user_id=user["id"]),
+        params=dict(user_id=user["id"]),
         auth=user["auth"],
     )
     assert response.json() == []
