@@ -39,6 +39,14 @@ def test_clan_registration(client: TestClient, user: dict, clan_icon: str):
     )
     assert response.status_code == 422
 
+    response = client.get(
+        "/v1/clan/by-id/batch",
+        json=dict(clan_ids=[1, 2]),
+        auth=user["auth"],
+    ).json()
+    assert type(response) is list
+    assert len(response) == 1
+
 
 def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon: str):
     # Setup

@@ -222,6 +222,16 @@ def clan_by_id(
     return db.get_clan_by_id(session, clan_id)
 
 
+@app.get("/v1/clan/by-id/batch", response_model=list[UserRead])
+def user(
+    clan_ids: list[int] = Body(embed=True),
+    *,
+    user: UserLogin = Depends(auth.auth_user),
+    session: Session = Depends(db.get_session),
+):
+    return db.get_clans_by_id(session, clan_ids)
+
+
 @app.get("/v1/clan/for-user/by-id", response_model=list[UserClanLink])
 def clan_for_user_by_id(
     user_id: int = Body(embed=True),
@@ -388,3 +398,15 @@ def server_update(
     server: ServerLogin = Depends(auth.auth_server),
 ):
     return db.update_server(session, server, server_update)
+
+
+@app.post("/v1/server/verify-clan-membership", response_model=bool)
+def server_verify_clan_membership(
+    user_id: int = Body(embed=True),
+    clan_id: int = Body(embed=True),
+    *,
+    session: Session = Depends(db.get_session),
+    server: ServerLogin = Depends(auth.auth_server),
+):
+    user = db.get_user_by_id(session, user_id)
+    return clan_id in [link.clan_id for link in user.clan_links]

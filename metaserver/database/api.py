@@ -135,6 +135,10 @@ def get_clan_by_id(session: Session, clan_id: int) -> Clan:
     return session.exec(select(Clan).where(Clan.id == clan_id)).one()
 
 
+def get_clans_by_id(session: Session, clan_ids: list[int]) -> User:
+    return session.exec(select(User).where(col(Clan.id).in_(clan_ids))).all()
+
+
 def get_clan_by_tag(session: Session, clan_tag: str) -> Clan:
     return session.exec(select(Clan).where(Clan.tag == clan_tag)).one()
 

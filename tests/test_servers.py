@@ -95,3 +95,36 @@ def test_server_list_and_update(client: TestClient, user: dict, server: dict):
     resp = client.get("/v1/server/list/online", auth=user["auth"])
     assert resp.status_code == 200
     assert len(resp.json()) == 1
+
+
+def test_server_verify_clan_membership(
+    client: TestClient,
+    user: dict,
+    user2: dict,
+    clan_icon: str,
+    server: dict,
+):
+
+    # Create a clan
+    clan_name, clan_tag = "Zaitev's Snore Club", "Zzz"
+    clan = client.post(
+        "/v1/clan/register",
+        json=dict(tag=clan_tag, name=clan_name, icon=clan_icon),
+        auth=user["auth"],
+    ).json()
+
+    # Check that user is in clan
+    response = client.post(
+        "/v1/server/verify-clan-membership",
+        json=dict(user_id=user["id"], clan_id=clan["id"]),
+        auth=server["auth"],
+    )
+    assert response.json() is True
+
+    # Check that user2 is not in clan
+    response = client.post(
+        "/v1/server/verify-clan-membership",
+        json=dict(user_id=user2["id"], clan_id=clan["id"]),
+        auth=server["auth"],
+    )
+    assert response.json() is False
