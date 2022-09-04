@@ -39,13 +39,30 @@ def test_clan_registration(client: TestClient, user: dict, clan_icon: str):
     )
     assert response.status_code == 422
 
+    # Get list of clans
     response = client.get(
         "/v1/clan/by-id/batch",
         params=dict(clan_ids=[1, 2]),
         auth=user["auth"],
     ).json()
-    assert type(response) is list
+    assert response[0] == clan
     assert len(response) == 1
+
+    clan2 = dict(tag=clan_tag + "2", name=clan_name + "2", icon=clan_icon)
+    response = client.post(
+        "/v1/clan/register",
+        json=clan2,
+        auth=user["auth"],
+    )
+
+    response = client.get(
+        "/v1/clan/by-id/batch",
+        params=dict(clan_ids=[1, 2]),
+        auth=user["auth"],
+    ).json()
+    assert len(response) == 2
+    assert response[0] == clan
+    assert response[1]["name"] == clan2["name"]
 
 
 def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon: str):
@@ -70,11 +87,11 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
 
     # Non-existent invite can't be accepted.
     response = client.post(
-        "/v1/clan/accept-invite",
-        json=dict(clan_id=clan["id"]),
+        "/v1/clan/invite-response",
+        json=dict(clan_id=clan["id"], accept=True),
         auth=nonadmin["auth"],
     )
-    assert response.status_code == 401
+    assert response.status_code == 422
 
     # There are (still) no invites.
     response = client.get(
@@ -144,11 +161,19 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
 
     # Invites can be accepted.
     response = client.post(
-        "/v1/clan/accept-invite",
-        json=dict(clan_id=clan["id"]),
+        "/v1/clan/invite-response",
+        json=dict(clan_id=clan["id"], accept=True),
         auth=nonadmin["auth"],
     )
     assert response.status_code == 200
+
+    # Members cannot kick users
+    response = client.post(
+        "/v1/clan/kick",
+        json=dict(user_id=admin["id"], clan_id=clan["id"]),
+        auth=nonadmin["auth"],
+    )
+    assert response.status_code == 403
 
     # Both admin and non-admin are now members.
     response = client.get(
@@ -167,3 +192,25 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
         auth=nonadmin["auth"],
     )
     assert response.status_code == 401
+
+    # Admin can kick users
+    response = client.post(
+        "/v1/clan/kick",
+        json=dict(user_id=nonadmin["id"], clan_id=clan["id"]),
+        auth=admin["auth"],
+    )
+    assert response.status_code == 200
+    response = client.post(
+        "/v1/user/verify-clan-membership",
+        json=dict(clan_id=clan["id"]),
+        auth=nonadmin["auth"],
+    )
+    assert response.json() is False
+
+    # Now only admin is a member
+    response = client.get(
+        "/v1/clan/members",
+        params=dict(clan_id=clan["id"]),
+        auth=nonadmin["auth"],
+    )
+    assert [l["user_id"] for l in response.json()] == [admin["id"]]

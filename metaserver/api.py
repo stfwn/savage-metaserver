@@ -18,6 +18,7 @@ from sqlmodel import Session
 import metaserver.database.api as db
 from metaserver import auth, config, email
 from metaserver.database.models import Clan, Skin, User, UserClanLink, Server
+from metaserver.database.utils import UserClanLinkDeletedReason
 from metaserver.schemas import (
     ClanCreate,
     ServerLogin,
@@ -52,12 +53,14 @@ def index():
 
 @app.get("/v1/user/by-id", response_model=UserRead)
 def user(
-    user_id: int,
+    user_id: int = Query(),
     *,
     user: UserLogin = Depends(auth.auth_user),
     session: Session = Depends(db.get_session),
 ):
-    return db.get_user_by_id(session, user_id)
+    if user := db.get_user_by_id(session, user_id):
+        return user
+    raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
 
 
 @app.get("/v1/user/by-id/batch", response_model=list[UserRead])
@@ -132,22 +135,27 @@ def user_register(
         salt=salt,
     )
     try:
-        user = db.create_user(session, user)
+        user = db.commit_and_refresh(session, user)
         mail_token = email.generate_token(user.id)
         email.send_verification_email(recipient=user.username, token=mail_token)
-    except IntegrityError:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Username taken")
+    except IntegrityError as e:
+        if "display_name" in e._message():
+            raise HTTPException(status.HTTP_409_CONFLICT, "Display name taken")
+        else:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Username taken")
     return UserReadWithProof(**user.dict(), proof=auth.generate_user_proof(user.id))
 
 
-@app.post("/v1/user/verify-clan-membership")
+@app.post("/v1/user/verify-clan-membership", response_model=bool)
 def user_verify_clan_membership(
     clan_id: int = Body(embed=True),
     *,
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
-    return db.user_is_clan_member(session, user, clan_id)
+    if link := db.get_user_clan_link(session, user.id, clan_id):
+        return link.is_membership
+    return False
 
 
 @app.post("/v1/user/email/verify", response_model=UserReadWithProof)
@@ -162,7 +170,8 @@ def user_email_verify(
         raise HTTPException(status.HTTP_403_FORBIDDEN, "User already verified mail")
     try:
         if email.verify_token(user.id, mail_token):
-            db.set_user_verified_email(session, user)
+            user.verified_email = datetime.utcnow()
+            db.commit_and_refresh(session, user)
             background_tasks.add_task(db.set_user_last_online_now, session, user)
             return UserReadWithProof(
                 **user.dict(), proof=auth.generate_user_proof(user.id)
@@ -203,7 +212,8 @@ def user_change_display_name(
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
-    return db.change_display_name(session, user, display_name)
+    user.display_name = display_name
+    return db.commit_and_refresh(session, user)
 
 
 ############
@@ -227,10 +237,12 @@ def clan_by_id(
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
-    return db.get_clan_by_id(session, clan_id)
+    if clan := db.get_clan_by_id(session, clan_id):
+        return clan
+    raise HTTPException(status.HTTP_404_NOT_FOUND, "Clan not found")
 
 
-@app.get("/v1/clan/by-id/batch", response_model=list[UserRead])
+@app.get("/v1/clan/by-id/batch", response_model=list[Clan])
 def clan_by_id_batch(
     clan_ids: list[int] = Query(),
     *,
@@ -248,23 +260,9 @@ def clan_for_user_by_id(
     user: UserLogin = Depends(auth.auth_user),
 ):
     if user_id != user.id:
-        user = db.get_user_by_id(session, user_id)
+        if not (user := db.get_user_by_id(session, user_id)):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
     return [link for link in user.clan_links if link.is_membership]
-
-
-@app.post("/v1/clan/accept-invite")
-def clan_accept_invite(
-    clan_id: int = Body(embed=True),
-    *,
-    session: Session = Depends(db.get_session),
-    user: UserLogin = Depends(auth.auth_user),
-):
-    if db.user_is_invited_to_clan(session, user, clan_id):
-        db.accept_clan_invite(session, user, clan_id)
-    else:
-        raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED, "User is not invited to join clan"
-        )
 
 
 @app.post("/v1/clan/invite")
@@ -279,6 +277,80 @@ def clan_invite(
         db.invite_user_to_clan(session, user_id, clan_id)
     else:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User is not clan admin")
+
+
+@app.post("/v1/clan/invite-response")
+def clan_invite_response(
+    clan_id: int = Body(embed=True),
+    accept: bool = Body(embed=True),
+    *,
+    session: Session = Depends(db.get_session),
+    user: UserLogin = Depends(auth.auth_user),
+):
+    """For `accept`, supply `1` or `true` to accept, `0` or `false` to decline."""
+    for link in user.clan_links:
+        if link.clan_id == clan_id:
+            if link.is_open_invitation:
+                link.joined = datetime.utcnow()
+                db.commit_and_refresh(session, link)
+                return
+            elif link.is_declined_invitation:
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    "User previously declined this invitation",
+                )
+            elif link.is_retracted_invitation:
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    "This invitation has been retracted",
+                )
+            elif link.is_membership:
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    "User is already a member of clan",
+                )
+            elif link.user_left_clan:
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    "User has left clan and was not reinvited",
+                )
+            elif link.user_was_kicked:
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    "User was kicked from clan and was not reinvited",
+                )
+    raise HTTPException(
+        status.HTTP_422_UNPROCESSABLE_ENTITY, "User is not invited to join clan"
+    )
+
+
+@app.post("/v1/clan/kick")
+def clan_kick(
+    clan_id: int = Body(embed=True),
+    user_id: int = Body(embed=True),
+    *,
+    session: Session = Depends(db.get_session),
+    user: UserLogin = Depends(auth.auth_user),
+):
+    if (
+        user_clan_link := db.get_user_clan_link(
+            session, user_id=user.id, clan_id=clan_id
+        )
+    ) and user_clan_link.is_admin:
+        member_link = db.get_user_clan_link(session, user_id, clan_id)
+        if member_link.is_admin:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                "Clan admins cannot be kicked",
+            )
+        member_link.deleted = datetime.utcnow()
+        member_link.deleted_reason = UserClanLinkDeletedReason.KICKED
+        db.commit_and_refresh(session, member_link)
+        return
+    raise HTTPException(
+        status.HTTP_403_FORBIDDEN,
+        "User is not authorized to kick members of this clan",
+    )
 
 
 @app.get("/v1/clan/invites", response_model=list[UserClanLink])
@@ -416,5 +488,6 @@ def server_verify_clan_membership(
     session: Session = Depends(db.get_session),
     server: ServerLogin = Depends(auth.auth_server),
 ):
-    user = db.get_user_by_id(session, user_id)
-    return clan_id in [link.clan_id for link in user.clan_links]
+    if link := db.get_user_clan_link(session, user_id, clan_id):
+        return link.is_membership
+    return False

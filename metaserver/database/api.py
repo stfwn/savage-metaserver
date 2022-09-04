@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 
+from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, SQLModel, col, create_engine, select
 from sqlmodel.pool import StaticPool
 
@@ -33,28 +34,41 @@ def get_session():
         yield session
 
 
+###########
+# General #
+###########
+
+
+def commit_and_refresh(
+    session: Session, model: Clan | Skin | User | UserClanLink | Server
+):
+    session.add(model)
+    session.commit()
+    session.refresh(model)
+    return model
+
+
 ########
 # User #
 ########
 
 
-def create_user(session: Session, user: User):
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    return user
+def get_user_by_id(session: Session, user_id: int) -> User | None:
+    try:
+        return session.exec(select(User).where(User.id == user_id)).one()
+    except NoResultFound:
+        return None
 
 
-def get_user_by_id(session: Session, user_id: int) -> User:
-    return session.exec(select(User).where(User.id == user_id)).first()
-
-
-def get_users_by_id(session: Session, user_ids: list[int]) -> User:
+def get_users_by_id(session: Session, user_ids: list[int]) -> list[User]:
     return session.exec(select(User).where(col(User.id).in_(user_ids))).all()
 
 
-def get_user_by_username(session: Session, username: str) -> User:
-    return session.exec(select(User).where(User.username == username)).first()
+def get_user_by_username(session: Session, username: str) -> User | None:
+    try:
+        return session.exec(select(User).where(User.username == username)).one()
+    except NoResultFound:
+        return None
 
 
 def user_is_clan_admin(session: Session, user: User, clan_id: int) -> bool:
@@ -64,41 +78,9 @@ def user_is_clan_admin(session: Session, user: User, clan_id: int) -> bool:
     return False
 
 
-def user_is_clan_member(session: Session, user: User, clan_id: int) -> bool:
-    for clan_link in user.clan_links:
-        if clan_link.clan.id == clan_id and clan_link.joined and not clan_link.deleted:
-            return True
-    return False
-
-
-def user_is_invited_to_clan(session: Session, user: User, clan_id: int) -> bool:
-    for clan_link in user.clan_links:
-        if clan_link.clan.id == clan_id:
-            return bool(clan_link.invited)
-    return False
-
-
-def accept_clan_invite(session: Session, user: User, clan_id: int):
-    for clan_link in user.clan_links:
-        if clan_link.clan.id == clan_id and not (clan_link.joined or clan_link.deleted):
-            clan_link.joined = datetime.utcnow()
-            session.add(clan_link)
-    session.commit()
-
-
-def change_display_name(session: Session, user: User, display_name: str) -> User:
-    user.display_name = display_name
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    return user
-
-
 def set_user_last_online_now(session: Session, user: User):
     user.last_online = datetime.utcnow()
-    session.add(user)
-    session.commit()
-    session.refresh(user)
+    return commit_and_refresh(session, user)
 
 
 def set_user_last_online_now_by_id(session: Session, user_id: int):
@@ -106,11 +88,22 @@ def set_user_last_online_now_by_id(session: Session, user_id: int):
     set_user_last_online_now(session, user)
 
 
-def set_user_verified_email(session: Session, user: User):
-    user.verified_email = datetime.utcnow()
-    session.add(user)
-    session.commit()
-    session.refresh(user)
+################
+# UserClanLink #
+################
+
+
+def get_user_clan_link(
+    session: Session, user_id: int, clan_id: int
+) -> UserClanLink | None:
+    try:
+        return session.exec(
+            select(UserClanLink).where(
+                UserClanLink.user_id == user_id and UserClanLink.clan_id == clan_id
+            )
+        ).one()
+    except NoResultFound:
+        return None
 
 
 ########
@@ -131,16 +124,15 @@ def get_all_clans(session: Session):
     return session.exec(select(Clan)).all()
 
 
-def get_clan_by_id(session: Session, clan_id: int) -> Clan:
-    return session.exec(select(Clan).where(Clan.id == clan_id)).one()
+def get_clan_by_id(session: Session, clan_id: int) -> Clan | None:
+    try:
+        return session.exec(select(Clan).where(Clan.id == clan_id)).one()
+    except NoResultFound:
+        return None
 
 
-def get_clans_by_id(session: Session, clan_ids: list[int]) -> User:
-    return session.exec(select(User).where(col(Clan.id).in_(clan_ids))).all()
-
-
-def get_clan_by_tag(session: Session, clan_tag: str) -> Clan:
-    return session.exec(select(Clan).where(Clan.tag == clan_tag)).one()
+def get_clans_by_id(session: Session, clan_ids: list[int]) -> list[Clan]:
+    return session.exec(select(Clan).where(col(Clan.id).in_(clan_ids))).all()
 
 
 def get_clan_user_invites(session: Session, clan_id: int) -> list[UserClanLink]:

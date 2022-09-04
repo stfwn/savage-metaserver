@@ -11,7 +11,7 @@ from metaserver.database.models import *
 from tests import utils
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def client():
     db.engine = create_engine(
         "sqlite://",
@@ -36,16 +36,22 @@ def no_email_sending(monkeypatch):
 
 @pytest.fixture
 def user(client: TestClient):
-    username = "foo@example.com"
-    password = "12345678"
-    return utils.register_user(client, username, password)
+    return utils.register_user(
+        client,
+        display_name="foo",
+        username="foo@example.com",
+        password="12345678",
+    )
 
 
 @pytest.fixture
 def user2(client: TestClient):
-    username = "foo2@example.com"
-    password = "12345678"
-    return utils.register_user(client, username, password)
+    return utils.register_user(
+        client,
+        display_name="foo2",
+        username="foo2@example.com",
+        password="12345678",
+    )
 
 
 @pytest.fixture

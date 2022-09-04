@@ -9,10 +9,10 @@ def dict_without_key(d, k):
     return d2
 
 
-def register_user(client: TestClient, username: str, password: str):
+def register_user(client: TestClient, display_name: str, username: str, password: str):
     user = client.post(
         "/v1/user/register",
-        json=dict(username=username, display_name="foo", password=password),
+        json=dict(username=username, display_name=display_name, password=password),
     ).json()
 
     mail_token = email.TOKEN_CACHE_REVERSE[user["id"]]

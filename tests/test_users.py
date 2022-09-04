@@ -33,6 +33,13 @@ def test_user_registration(client: TestClient):
     )
     assert response.status_code == 401
 
+    # Registering with a taken display name should fail
+    response = client.post(
+        "/v1/user/register",
+        json=dict(username="2" + username, display_name="foo", password=correct_pw),
+    )
+    assert response.status_code == 409
+
     # Verify the user's email
     mail_token = email.TOKEN_CACHE_REVERSE[user["id"]]
     response = client.post(
