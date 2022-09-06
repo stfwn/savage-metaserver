@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+import secrets
 
 from fastapi import (
     BackgroundTasks,
@@ -17,7 +18,14 @@ from sqlmodel import Session
 
 import metaserver.database.api as db
 from metaserver import auth, config, email
-from metaserver.database.models import Clan, Skin, User, UserClanLink, Server
+from metaserver.database.models import (
+    Clan,
+    EmailToken,
+    Skin,
+    User,
+    UserClanLink,
+    Server,
+)
 from metaserver.database.utils import UserClanLinkDeletedReason
 from metaserver.schemas import (
     ClanCreate,
@@ -136,8 +144,9 @@ def user_register(
     )
     try:
         user = db.commit_and_refresh(session, user)
-        mail_token = email.generate_token(user.id)
-        email.send_verification_email(recipient=user.username, token=mail_token)
+        email_token = EmailToken(user=user)
+        db.commit_and_refresh(session, email_token)
+        email.send_verification_email(recipient=user.username, token=email_token.key)
     except IntegrityError as e:
         if "display_name" in e._message():
             raise HTTPException(status.HTTP_409_CONFLICT, "Display name taken")
@@ -168,8 +177,9 @@ def user_email_verify(
 ):
     if user.verified_email:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "User already verified mail")
-    try:
-        if email.verify_token(user.id, mail_token):
+
+    if token := user.email_token:
+        if secrets.compare_digest(mail_token, token.key):
             user.verified_email = datetime.utcnow()
             db.commit_and_refresh(session, user)
             background_tasks.add_task(db.set_user_last_online_now, session, user)
@@ -180,7 +190,7 @@ def user_email_verify(
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN, "Incorrect mail verification token"
             )
-    except KeyError:
+    else:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             "No mail verification token found for user (request a new one)",
@@ -195,13 +205,15 @@ def user_email_new_token(
 ):
     if user.verified_email:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "User already verified mail")
-    if email.get_token_age_for_user(user.id) <= config.email_token_renew_timeout:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
-            f"Wait at least {config.email_token_renew_timeout} seconds before requesting a new token",
-        )
-    mail_token = email.generate_token(user.id)
-    email.send_verification_email(user.username, mail_token)
+    if email_token := user.email_token:
+        if datetime.utcnow() - email_token.created <= config.email_token_renew_timeout:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                f"Wait at least {config.email_token_renew_timeout.seconds} seconds before requesting a new token",
+            )
+        email_token.key = EmailToken.new_key()
+        db.commit_and_refresh(session, email_token)
+        email.send_verification_email(user.username, email_token.key)
     return "Token sent"
 
 

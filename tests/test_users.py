@@ -2,6 +2,8 @@ from fastapi.testclient import TestClient
 
 from metaserver import email
 
+from tests import utils
+
 
 def test_user_registration(client: TestClient):
     username = "foo@example.com"
@@ -41,7 +43,7 @@ def test_user_registration(client: TestClient):
     assert response.status_code == 409
 
     # Verify the user's email
-    mail_token = email.TOKEN_CACHE_REVERSE[user["id"]]
+    mail_token = utils.get_email_token_for_user_id(user["id"])
     response = client.post(
         "/v1/user/email/verify",
         json=dict(mail_token=mail_token),
@@ -128,12 +130,13 @@ def test_user_mail_tokens(client: TestClient):
     assert "wait" in response.json()["detail"].lower()
 
     # Request new token
-    old_mail_token = email.TOKEN_CACHE_REVERSE[user["id"]]
-    get_big_number = lambda user_id: 1_000_000
-    email.get_token_age_for_user = get_big_number
+    old_mail_token = utils.get_email_token_for_user_id(user["id"])
+    utils.set_email_token_created_for_user_id_to_last_year(user["id"])
     response = client.post("/v1/user/email/renew-token", auth=auth)
     assert response.status_code == 200
-    new_mail_token = email.TOKEN_CACHE_REVERSE[user["id"]]
+
+    new_mail_token = utils.get_email_token_for_user_id(user["id"])
+    assert old_mail_token != new_mail_token
 
     # Try to verify with old token
     response = client.post(

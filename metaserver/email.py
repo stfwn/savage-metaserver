@@ -8,14 +8,10 @@ from cachetools import TTLCache, cached
 import requests
 
 from metaserver import constants
+import metaserver.database.api as db
 
 # Create a new SES resource and specify a region.
 ses = boto3.client("ses", region_name="eu-central-1")
-
-CACHE_TTL = 60 * 5
-TOKEN_CACHE = TTLCache(maxsize=10_000, ttl=CACHE_TTL)
-TOKEN_CACHE_REVERSE = TTLCache(maxsize=10_000, ttl=CACHE_TTL)
-GENERATION_TIME_FOR_USER_ID = TTLCache(maxsize=10_000, ttl=CACHE_TTL)
 
 
 class DomainBlacklist:
@@ -34,40 +30,6 @@ class DomainBlackListError(ValueError):
 
 
 domain_blacklist = DomainBlacklist()
-
-
-def generate_token(user_id: int) -> str:
-    # Invalidate old token if applicable
-    try:
-        old_token = TOKEN_CACHE_REVERSE[user_id]
-        del TOKEN_CACHE[old_token]
-        del TOKEN_CACHE_REVERSE[user_id]
-    except KeyError:
-        pass
-
-    # Generate new token
-    token = secrets.token_urlsafe(4).upper()  # 4 bytes -> token has length 6
-    TOKEN_CACHE[token] = user_id
-    TOKEN_CACHE_REVERSE[user_id] = token
-    GENERATION_TIME_FOR_USER_ID[user_id] = time.monotonic()
-    return token
-
-
-def verify_token(user_id: int, token: str) -> bool:
-    return TOKEN_CACHE[token] == user_id
-
-
-def get_user_id_for_verification_token(token: str) -> int:
-    user_id = TOKEN_CACHE[token]
-    return user_id
-
-
-def get_token_age_for_user(user_id: int) -> int | float:
-    """Get how long ago a token was generated in seconds."""
-    try:
-        return int(time.monotonic() - GENERATION_TIME_FOR_USER_ID[user_id])
-    except KeyError:
-        return float("inf")
 
 
 def send_verification_email(recipient: str, token: str):

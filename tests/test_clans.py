@@ -5,7 +5,7 @@ from tests.utils import dict_without_key
 
 def test_clan_registration(client: TestClient, user: dict, clan_icon: str):
     # Register a new clan.
-    clan_name, clan_tag = "Zaitev's Snore Club", "Zzz"
+    clan_name, clan_tag = "Zaitev's Snore Club", "^123(Zzz"
     response = client.post(
         "/v1/clan/register",
         json=dict(tag=clan_tag, name=clan_name, icon=clan_icon),
@@ -48,7 +48,8 @@ def test_clan_registration(client: TestClient, user: dict, clan_icon: str):
     assert response[0] == clan
     assert len(response) == 1
 
-    clan2 = dict(tag=clan_tag + "2", name=clan_name + "2", icon=clan_icon)
+    clan_tag2 = clan_tag[:-1] + "2"
+    clan2 = dict(tag=clan_tag2, name=clan_name + "2", icon=clan_icon)
     response = client.post(
         "/v1/clan/register",
         json=clan2,

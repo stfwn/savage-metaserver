@@ -1,4 +1,6 @@
 from datetime import datetime
+import random
+import string
 from typing import Literal, Optional
 
 from sqlmodel import VARCHAR, Column, Field, JSON, Relationship, SQLModel, create_engine
@@ -93,6 +95,9 @@ class User(SQLModel, table=True):
     last_online: datetime | None
 
     clan_links: list[UserClanLink] = Relationship(back_populates="user")
+    email_token: Optional["EmailToken"] = Relationship(
+        back_populates="user", sa_relationship_kwargs={"uselist": False}
+    )
     skin_links: list[UserSkinLink] = Relationship(back_populates="user")
     servers: list["Server"] = Relationship(back_populates="user")
 
@@ -140,6 +145,22 @@ class Server(SQLModel, table=True):
     # matches: list["Match"] = Relationship(back_populates="server")
     user_id: int = Field(default=None, foreign_key="user.id")
     user: User = Relationship(back_populates="servers")
+
+
+class EmailToken(SQLModel, table=True):
+    created: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    user_id: int = Field(default=None, primary_key=True, foreign_key="user.id")
+    key: str = Field(default_factory=lambda: EmailToken.new_key())
+
+    user: User = Relationship(
+        back_populates="email_token", sa_relationship_kwargs={"uselist": False}
+    )
+
+    @staticmethod
+    def new_key():
+        key_length = 6
+        chars = string.ascii_uppercase.replace("I", "").replace("L", "")
+        return "".join(random.choice(chars) for i in range(key_length))
 
 
 #########

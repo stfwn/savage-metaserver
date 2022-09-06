@@ -12,3 +12,6 @@ database-backup:
 
 deploy:
 	docker compose up -d
+
+migrate:
+	alembic upgrade head
