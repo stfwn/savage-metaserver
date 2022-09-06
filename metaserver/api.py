@@ -285,11 +285,18 @@ def clan_invite(
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
+    breakpoint()
     if inviter_clan_link := db.get_user_clan_link(session, user.id, clan_id):
         if inviter_clan_link.is_admin:
             if invitee := db.get_user_by_id(session, user_id):
                 ucl = UserClanLink(user=invitee, clan=inviter_clan_link.clan)
-                db.commit_and_refresh(session, ucl)
+                try:
+                    db.commit_and_refresh(session, ucl)
+                except IntegrityError:
+                    raise HTTPException(
+                        status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        "Invitee has an existing relation to clan (invited/member/left/kicked)",
+                    )
             else:
                 raise HTTPException(
                     status.HTTP_422_UNPROCESSABLE_ENTITY,
