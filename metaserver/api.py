@@ -285,10 +285,26 @@ def clan_invite(
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
-    if db.user_is_clan_admin(session, user, clan_id):
-        db.invite_user_to_clan(session, user_id, clan_id)
+    if inviter_clan_link := db.get_user_clan_link(session, user.id, clan_id):
+        if inviter_clan_link.is_admin:
+            if invitee := db.get_user_by_id(session, user_id):
+                ucl = UserClanLink(user=invitee, clan=inviter_clan_link.clan)
+                db.commit_and_refresh(session, ucl)
+            else:
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    "Invitee doesn't exist",
+                )
+        else:
+            raise HTTPException(
+                status.HTTP_401_UNAUTHORIZED,
+                "Inviter is not clan admin",
+            )
     else:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User is not clan admin")
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Clan doesn't exist or inviter isn't in it",
+        )
 
 
 @app.post("/v1/clan/invite-response")
@@ -372,8 +388,12 @@ def clan_invites(
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
-    if db.user_is_clan_admin(session, user, clan_id):
+    if user_clan_link := db.get_user_clan_link(session, user.id, clan_id):
         return db.get_clan_user_invites(session, clan_id)
+    raise HTTPException(
+        status.HTTP_403_FORBIDDEN,
+        "User is not authorized to view clan invites for this clan",
+    )
 
 
 @app.get("/v1/clan/members", response_model=list[UserClanLink])

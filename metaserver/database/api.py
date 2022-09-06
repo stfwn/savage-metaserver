@@ -71,13 +71,6 @@ def get_user_by_username(session: Session, username: str) -> User | None:
         return None
 
 
-def user_is_clan_admin(session: Session, user: User, clan_id: int) -> bool:
-    for clan_link in user.clan_links:
-        if clan_link.clan.id == clan_id:
-            return clan_link.is_admin
-    return False
-
-
 def set_user_last_online_now(session: Session, user: User):
     user.last_online = datetime.utcnow()
     return commit_and_refresh(session, user)
