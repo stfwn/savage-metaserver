@@ -98,9 +98,9 @@ def get_user_clan_link(
 ) -> UserClanLink | None:
     try:
         return session.exec(
-            select(UserClanLink).where(
-                UserClanLink.user_id == user_id and UserClanLink.clan_id == clan_id
-            )
+            select(UserClanLink)
+            .where(UserClanLink.user_id == user_id)
+            .where(UserClanLink.clan_id == clan_id)
         ).one()
     except NoResultFound:
         return None
