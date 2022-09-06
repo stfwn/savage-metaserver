@@ -208,7 +208,7 @@ def user_email_new_token(
     if email_token := user.email_token:
         if datetime.utcnow() - email_token.created <= config.email_token_renew_timeout:
             raise HTTPException(
-                status.HTTP_403_FORBIDDEN,
+                status.HTTP_429_TOO_MANY_REQUESTS,
                 f"Wait at least {config.email_token_renew_timeout.seconds} seconds before requesting a new token",
             )
         email_token.key = EmailToken.new_key()
@@ -285,7 +285,6 @@ def clan_invite(
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
-    breakpoint()
     if inviter_clan_link := db.get_user_clan_link(session, user.id, clan_id):
         if inviter_clan_link.is_admin:
             if invitee := db.get_user_by_id(session, user_id):

@@ -126,7 +126,7 @@ def test_user_mail_tokens(client: TestClient):
 
     # Request new token too soon
     response = client.post("/v1/user/email/renew-token", auth=auth)
-    assert response.status_code == 403
+    assert response.status_code == 429
     assert "wait" in response.json()["detail"].lower()
 
     # Request new token
