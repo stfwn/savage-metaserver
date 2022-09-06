@@ -77,21 +77,20 @@ class ClanCreate(BaseModel):
 
     @validator("tag", pre=True, always=False)
     def validate_tag(cls, v):
-        max_colors = 4
         max_letters = 4
 
         v = v.strip()
 
-        assert v.replace(
-            "^", ""
-        ).isalnum(), "Only ascii letters, numbers and '^' allowed"
         assert re.match(
             r"^(?!.*\^(?!([\d]{3}|[rgbwkycm]))).*$", v
         ), "'^' must always be followed by exactly three numbers or one of 'rgbwkycm'"
-        assert v.count("^") <= max_colors, "Clan tags can contain at most 4 colors"
         assert (
-            len(re.sub(r"\^[\d]{3}", "", v)) <= max_letters
-        ), "Clan tags can contain at most 4 letters"
+            v.count("^") <= max_letters
+        ), f"Clan tags can contain at most {max_letters} colors"
+        without_colors = re.sub(r"\^([\d]{3}|[rgbwkycm])", "", v)
+        assert (
+            len(without_colors) <= max_letters
+        ), f"Clan tags can contain at most {max_letters} letters"
         return v
 
     @validator("icon")
