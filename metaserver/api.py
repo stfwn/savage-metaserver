@@ -459,11 +459,7 @@ def server_list_my(
 
 
 @app.get("/v1/server/list/online", response_model=list[ServerRead])
-def server_list_online(
-    *,
-    session: Session = Depends(db.get_session),
-    user: UserLogin = Depends(auth.auth_user),
-):
+def server_list_online(*, session: Session = Depends(db.get_session)):
     return db.get_online_servers(
         session,
         cutoff=datetime.utcnow() - config.server_online_cutoff,
