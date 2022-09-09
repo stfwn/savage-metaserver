@@ -1,4 +1,5 @@
 from datetime import datetime
+import base64
 import json
 import secrets
 
@@ -9,6 +10,7 @@ from fastapi import (
     FastAPI,
     HTTPException,
     Query,
+    Response,
     status,
 )
 from fastapi.responses import RedirectResponse
@@ -240,6 +242,13 @@ def clan(
     user: UserLogin = Depends(auth.auth_user),
 ):
     return db.get_all_clans(session)
+
+
+@app.get("/v1/clan/icon/{clan_id}.png")
+def get_clan_icon_png(clan_id: int, session: Session = Depends(db.get_session)):
+    if clan := db.get_clan_by_id(session, clan_id):
+        return Response(content=base64.b64decode(clan.icon), media_type="image/png")
+    raise HTTPException(status.HTTP_404_NOT_FOUND)
 
 
 @app.get("/v1/clan/by-id", response_model=Clan)
