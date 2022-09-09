@@ -244,7 +244,11 @@ def clan(
     return db.get_all_clans(session)
 
 
-@app.get("/v1/clan/icon/{clan_id}.png")
+@app.get(
+    "/v1/clan/icon/{clan_id}.png",
+    responses={200: {"content": {"image/png": {}}}},
+    response_class=Response,
+)
 def get_clan_icon_png(clan_id: int, session: Session = Depends(db.get_session)):
     if clan := db.get_clan_by_id(session, clan_id):
         return Response(content=base64.b64decode(clan.icon), media_type="image/png")
