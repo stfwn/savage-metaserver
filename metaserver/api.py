@@ -336,37 +336,41 @@ def clan_invite_response(
     user: UserLogin = Depends(auth.auth_user),
 ):
     """For `accept`, supply `1` or `true` to accept, `0` or `false` to decline."""
-    for link in user.clan_links:
-        if link.clan_id == clan_id:
-            if link.is_open_invitation:
+    if link := db.get_user_clan_link(session, user.id, clan_id):
+        if link.is_open_invitation:
+            if accept:
                 link.joined = datetime.utcnow()
                 db.commit_and_refresh(session, link)
                 return
-            elif link.is_declined_invitation:
-                raise HTTPException(
-                    status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    "User previously declined this invitation",
-                )
-            elif link.is_retracted_invitation:
-                raise HTTPException(
-                    status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    "This invitation has been retracted",
-                )
-            elif link.is_membership:
-                raise HTTPException(
-                    status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    "User is already a member of clan",
-                )
-            elif link.user_left_clan:
-                raise HTTPException(
-                    status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    "User has left clan and was not reinvited",
-                )
-            elif link.user_was_kicked:
-                raise HTTPException(
-                    status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    "User was kicked from clan and was not reinvited",
-                )
+            else:
+                link.deleted = datetime.utcnow()
+                link.deleted_reason = UserClanLinkDeletedReason.DECLINED
+                db.commit_and_refresh(session, link)
+        elif link.is_declined_invitation:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "User previously declined this invitation",
+            )
+        elif link.is_retracted_invitation:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "This invitation has been retracted",
+            )
+        elif link.is_membership:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "User is already a member of clan",
+            )
+        elif link.user_left_clan:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "User has left clan and was not reinvited",
+            )
+        elif link.user_was_kicked:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "User was kicked from clan and was not reinvited",
+            )
     raise HTTPException(
         status.HTTP_422_UNPROCESSABLE_ENTITY, "User is not invited to join clan"
     )
