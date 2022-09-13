@@ -447,10 +447,20 @@ def clan_change_icon(
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
-    try:
-        return db.update_icon(session, clan_id, icon)
-    except ValidationError:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY)
+    if (
+        user_clan_link := db.get_user_clan_link(
+            session, user_id=user.id, clan_id=clan_id
+        )
+    ) and user_clan_link.is_admin:
+        try:
+            return db.update_icon(session, clan_id, icon)
+        except ValidationError:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY)
+        return
+    raise HTTPException(
+        status.HTTP_403_FORBIDDEN,
+        "User is not authorized to change icon for this clan",
+    )        
 
 
 ############
