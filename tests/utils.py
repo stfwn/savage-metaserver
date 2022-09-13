@@ -1,6 +1,10 @@
+import base64
 from datetime import datetime, timedelta
+import io
+import random
 
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlmodel import select
 
 from metaserver import email
@@ -52,3 +56,14 @@ def set_email_token_created_for_user_id_to_last_year(user_id: int):
     ).one()
     email_token.created = datetime.utcnow() - timedelta(days=365)
     db.commit_and_refresh(session, email_token)
+
+
+def get_random_icon(width: int, height: int) -> str:
+    random_color_val = lambda: hex(random.randint(16, 255))[2:].upper()
+    random_color_triplet = (
+        lambda: random_color_val() + random_color_val() + random_color_val()
+    )
+    img = Image.new("RGB", (height, width), "#" + random_color_triplet())
+    buff = io.BytesIO()
+    img.save(buff, "PNG")
+    return base64.b64encode(buff.getvalue()).decode("utf-8")

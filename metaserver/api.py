@@ -31,6 +31,7 @@ from metaserver.database.models import (
 from metaserver.database.utils import UserClanLinkDeletedReason
 from metaserver.schemas import (
     ClanCreate,
+    ClanUpdateIcon,
     ServerLogin,
     ServerCreate,
     ServerRead,
@@ -439,28 +440,24 @@ def clan_register(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 
-@app.post("/v1/clan/change-icon")
+@app.post("/v1/clan/update-icon", response_model=Clan)
 def clan_change_icon(
-    clan_id: int = Body(embed=True),
-    icon: str = Body(embed=True),
+    clan_update: ClanUpdateIcon,
     *,
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
     if (
-        user_clan_link := db.get_user_clan_link(
-            session, user_id=user.id, clan_id=clan_id
-        )
+        user_clan_link := db.get_user_clan_link(session, user.id, clan_update.clan_id)
     ) and user_clan_link.is_admin:
-        try:
-            return db.update_icon(session, clan_id, icon)
-        except ValidationError:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY)
-        return
+        clan = user_clan_link.clan
+        clan.icon = clan_update.icon
+        db.commit_and_refresh(session, clan)
+        return clan
     raise HTTPException(
         status.HTTP_403_FORBIDDEN,
         "User is not authorized to change icon for this clan",
-    )        
+    )
 
 
 ############

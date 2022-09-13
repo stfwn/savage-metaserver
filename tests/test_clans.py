@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from tests.utils import dict_without_key
+from tests.utils import dict_without_key, get_random_icon
 
 
 def test_clan_registration(client: TestClient, user: dict, clan_icon: str):
@@ -215,3 +215,42 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
         auth=nonadmin["auth"],
     )
     assert [l["user_id"] for l in response.json()] == [admin["id"]]
+
+
+def test_clan_icon(client: TestClient, user: dict, clan_icon: str):
+    clan_name, clan_tag = "Zaitev's Snore Club", "^123(Zzz"
+
+    # Try bad image
+    response = client.post(
+        "/v1/clan/register",
+        json=dict(tag=clan_tag, name=clan_name, icon=clan_icon + "hi"),
+        auth=user["auth"],
+    )
+    assert response.status_code == 422
+
+    # Properly register clan
+    response = client.post(
+        "/v1/clan/register",
+        json=dict(tag=clan_tag, name=clan_name, icon=clan_icon),
+        auth=user["auth"],
+    )
+    assert response.status_code == 200
+    clan = response.json()
+
+    # Change icon to one that is too big
+    response = client.post(
+        "/v1/clan/update-icon",
+        json=dict(clan_id=clan["id"], icon=get_random_icon(64, 128)),
+        auth=user["auth"],
+    )
+    assert response.status_code == 422
+
+    # Properly change it
+    new_icon = get_random_icon(64, 64)
+    response = client.post(
+        "/v1/clan/update-icon",
+        json=dict(clan_id=clan["id"], icon=new_icon),
+        auth=user["auth"],
+    )
+    assert response.status_code == 200
+    assert response.json()["icon"] != clan["icon"]
