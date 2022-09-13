@@ -68,6 +68,22 @@ class UserLogin(BaseModel):
 ########
 
 
+def validate_icon(cls, v):
+    try:
+        img_bytes = base64.b64decode(v)
+        img = Image.open(io.BytesIO(img_bytes))
+        img.verify()
+    except (TypeError, binascii.Error, ValueError, OSError, IOError) as e:
+        raise ValueError("Image could not be validated")
+    if img.format.lower() != "png":
+        raise ValueError("Image should be in PNG format")
+    if img.size[0] > 64 or img.size[1] > 64:
+        raise ValueError("Image is too large")
+    if img.size[0] != img.size[1]:
+        raise ValueError("Image should be square")
+    return v
+
+
 class ClanCreate(BaseModel):
     """Clan object when the outside world wants to create a new clan."""
 
@@ -93,21 +109,14 @@ class ClanCreate(BaseModel):
         ), f"Clan tags can contain at most {max_letters} letters"
         return v
 
-    @validator("icon")
-    def validate_icon(cls, v):
-        try:
-            img_bytes = base64.b64decode(v)
-            img = Image.open(io.BytesIO(img_bytes))
-            img.verify()
-        except (TypeError, binascii.Error, ValueError, OSError, IOError) as e:
-            raise ValueError("Image could not be validated")
-        if img.format.lower() != "png":
-            raise ValueError("Image should be in PNG format")
-        if img.size[0] > 64 or img.size[1] > 64:
-            raise ValueError("Image is too large")
-        if img.size[0] != img.size[1]:
-            raise ValueError("Image should be square")
-        return v
+    _validate_icon = validator("icon", allow_reuse=True)(validate_icon)
+
+
+class ClanUpdateIcon(BaseModel):
+    clan_id: int
+    icon: str  # Base64PNG
+
+    _validate_icon = validator("icon", allow_reuse=True)(validate_icon)
 
 
 ##########
