@@ -141,6 +141,14 @@ def invite_user_to_clan(session: Session, user_id: int, clan_id: int):
     session.commit()
 
 
+def update_icon(session: Session, clan_id: int, icon: str):
+    """Updates the icon, includes validation"""
+    clan = session.exec(select(Clan).where(Clan.id == clan_id)).one()
+    clan.icon = ClanCreate.validate_icon(icon)
+    session.add(clan)
+    session.commit()
+
+
 ##########
 # Server #
 ##########

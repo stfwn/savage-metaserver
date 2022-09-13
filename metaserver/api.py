@@ -439,6 +439,20 @@ def clan_register(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 
+@app.post("/v1/clan/change-icon")
+def clan_change_icon(
+    clan_id: int = Body(embed=True),
+    icon: str = Body(embed=True),
+    *,
+    session: Session = Depends(db.get_session),
+    user: UserLogin = Depends(auth.auth_user),
+):
+    try:
+        return db.update_icon(session, clan_id, icon)
+    except ValidationError:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+
 ############
 # /v1/skin #
 ############
