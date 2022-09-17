@@ -36,6 +36,7 @@ from metaserver.schemas import (
     ServerCreate,
     ServerRead,
     ServerUpdate,
+    UserClanLinkUpdateRank,
     UserCreate,
     UserLogin,
     UserRead,
@@ -299,31 +300,28 @@ def clan_invite(
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
-    if inviter_clan_link := db.get_user_clan_link(session, user.id, clan_id):
-        if inviter_clan_link.rank >= UserClanLinkRank.ADMIN:
-            if invitee := db.get_user_by_id(session, user_id):
-                ucl = UserClanLink(user=invitee, clan=inviter_clan_link.clan)
-                try:
-                    db.commit_and_refresh(session, ucl)
-                except IntegrityError:
-                    raise HTTPException(
-                        status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        "Invitee has an existing relation to clan (invited/member/left/kicked)",
-                    )
-            else:
-                raise HTTPException(
-                    status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    "Invitee doesn't exist",
-                )
-        else:
-            raise HTTPException(
-                status.HTTP_401_UNAUTHORIZED,
-                "Inviter is not clan admin",
-            )
-    else:
+    if not (inviter_clan_link := db.get_user_clan_link(session, user.id, clan_id)):
         raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_403_FORBIDDEN,
             "Clan doesn't exist or inviter isn't in it",
+        )
+    if not (inviter_clan_link.rank >= UserClanLinkRank.ADMIN):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Inviter is not clan admin",
+        )
+    if not (invitee := db.get_user_by_id(session, user_id)):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Invitee doesn't exist",
+        )
+    ucl = UserClanLink(user=invitee, clan=inviter_clan_link.clan)
+    try:
+        db.commit_and_refresh(session, ucl)
+    except IntegrityError:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Invitee has an existing relation to clan (invited/member/left/kicked)",
         )
 
 
@@ -384,11 +382,20 @@ def clan_kick(
     session: Session = Depends(db.get_session),
     user: UserLogin = Depends(auth.auth_user),
 ):
-    if (
-        user_clan_link := db.get_user_clan_link(
-            session, user_id=user.id, clan_id=clan_id
+    if not (object_link := db.get_user_clan_link(session, user.id, clan_id)):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Clan doesn't exist or user is not in it.",
         )
-    ) and user_clan_link.rank >= UserClanLinkRank.ADMIN:
+    if not (subject_link := db.get_user_clan_link(session, user_id, clan_id)):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Clan doesn't exist or user is not in it.",
+        )
+
+    if (
+        object_link := db.get_user_clan_link(session, user.id, clan_id)
+    ) and object_link.rank >= UserClanLinkRank.ADMIN:
         member_link = db.get_user_clan_link(session, user_id, clan_id)
         if member_link.rank >= UserClanLinkRank.ADMIN:
             raise HTTPException(
@@ -462,6 +469,42 @@ def clan_change_icon(
         status.HTTP_403_FORBIDDEN,
         "User is not authorized to change icon for this clan",
     )
+
+
+@app.post("/v1/clan/update-rank", response_model=UserClanLink)
+def clan_update_rank(
+    update: UserClanLinkUpdateRank,
+    *,
+    session: Session = Depends(db.get_session),
+    user: UserLogin = Depends(auth.auth_user),
+):
+    if not (object_link := db.get_user_clan_link(session, user.id, update.clan_id)):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Clan doesn't exist or modifying user is not in it.",
+        )
+    if not (
+        subject_link := db.get_user_clan_link(session, update.user_id, update.clan_id)
+    ):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Clan doesn't exist or subject user is not in it.",
+        )
+
+    object_rank = UserClanLinkRank(object_link.rank)
+
+    if object_rank <= subject_link.rank:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Modifying user does not outrank subject user.",
+        )
+    if update.rank > object_rank:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "New rank is above the modifying user's rank.",
+        )
+    subject_link.rank = update.rank
+    return db.commit_and_refresh(session, subject_link)
 
 
 ############

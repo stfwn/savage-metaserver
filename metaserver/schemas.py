@@ -19,6 +19,7 @@ from pydantic import (
 )
 
 from metaserver import email, utils
+from metaserver.database.utils import UserClanLinkRank
 
 ########
 # User #
@@ -117,6 +118,17 @@ class ClanUpdateIcon(BaseModel):
     icon: str  # Base64PNG
 
     _validate_icon = validator("icon", allow_reuse=True)(validate_icon)
+
+
+################
+# UserClanLink #
+################
+
+
+class UserClanLinkUpdateRank(BaseModel):
+    user_id: int
+    clan_id: int
+    rank: UserClanLinkRank
 
 
 ##########

@@ -70,12 +70,12 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
     # Setup
     clan_name, clan_tag = "Zaitev's Snore Club", "Zzz"
 
-    admin = dict_without_key(user, "proof")
+    owner = dict_without_key(user, "proof")
     nonadmin = dict_without_key(user2, "proof")
     clan = client.post(
         "/v1/clan/register",
         json=dict(tag=clan_tag, name=clan_name, icon=clan_icon),
-        auth=admin["auth"],
+        auth=owner["auth"],
     ).json()
 
     # Outsider can't invite people.
@@ -84,7 +84,7 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
         json=dict(user_id=nonadmin["id"], clan_id=clan["id"]),
         auth=nonadmin["auth"],
     )
-    assert response.status_code == 401
+    assert response.status_code == 403
 
     # Non-existent invite can't be accepted.
     response = client.post(
@@ -98,35 +98,35 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
     response = client.get(
         "/v1/clan/invites",
         params=dict(clan_id=clan["id"]),
-        auth=admin["auth"],
+        auth=owner["auth"],
     )
     assert response.json() == []
 
-    # Admin is the only member.
+    # Owner is the only member.
     response = client.get(
         "/v1/clan/members",
         params=dict(clan_id=clan["id"]),
         auth=nonadmin["auth"],
     )
-    assert [l["user_id"] for l in response.json()] == [admin["id"]]
+    assert [l["user_id"] for l in response.json()] == [owner["id"]]
 
-    # Admin is a member
+    # Owner is a member
     response = client.post(
         "/v1/user/verify-clan-membership",
         json=dict(clan_id=clan["id"]),
-        auth=admin["auth"],
+        auth=owner["auth"],
     )
     assert response.json() == True
 
     # The list of clans for admin includes this clan
     response = client.get(
         "/v1/clan/for-user/by-id",
-        params=dict(user_id=admin["id"]),
-        auth=admin["auth"],
+        params=dict(user_id=owner["id"]),
+        auth=owner["auth"],
     )
     r = response.json()
     assert len(r) == 1
-    assert r[0]["user_id"] == admin["id"]
+    assert r[0]["user_id"] == owner["id"]
 
     # Non-admin is not a member
     response = client.post(
@@ -136,11 +136,11 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
     )
     assert response.json() == False
 
-    # Admin can invite people.
+    # Owner can invite people.
     response = client.post(
         "/v1/clan/invite",
         json=dict(user_id=nonadmin["id"], clan_id=clan["id"]),
-        auth=admin["auth"],
+        auth=owner["auth"],
     )
     assert response.status_code == 200
 
@@ -148,7 +148,7 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
     response = client.get(
         "/v1/clan/invites",
         params=dict(clan_id=clan["id"]),
-        auth=admin["auth"],
+        auth=owner["auth"],
     )
     assert [inv["user_id"] for inv in response.json()] == [nonadmin["id"]]
 
@@ -171,7 +171,7 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
     # Members cannot kick users
     response = client.post(
         "/v1/clan/kick",
-        json=dict(user_id=admin["id"], clan_id=clan["id"]),
+        json=dict(user_id=owner["id"], clan_id=clan["id"]),
         auth=nonadmin["auth"],
     )
     assert response.status_code == 403
@@ -183,7 +183,7 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
         auth=nonadmin["auth"],
     )
     assert sorted([l["user_id"] for l in response.json()]) == sorted(
-        [admin["id"], nonadmin["id"]]
+        [owner["id"], nonadmin["id"]]
     )
 
     # Regular member can't invite people.
@@ -192,13 +192,39 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
         json=dict(user_id=nonadmin["id"], clan_id=clan["id"]),
         auth=nonadmin["auth"],
     )
-    assert response.status_code == 401
+    assert response.status_code == 403
 
-    # Admin can kick users
+    # Owner can promote members to admin
+    response = client.post(
+        "/v1/clan/update-rank",
+        json=dict(user_id=nonadmin["id"], clan_id=clan["id"], rank="admin"),
+        auth=owner["auth"],
+    )
+    assert response.status_code == 200
+    assert response.json()["rank"] == "admin"
+
+    # Admin cannot demote owner
+    response = client.post(
+        "/v1/clan/update-rank",
+        json=dict(user_id=owner["id"], clan_id=clan["id"], rank="admin"),
+        auth=nonadmin["auth"],
+    )
+    assert response.status_code == 403
+
+    # Owner can demote admin to member
+    response = client.post(
+        "/v1/clan/update-rank",
+        json=dict(user_id=nonadmin["id"], clan_id=clan["id"], rank="member"),
+        auth=owner["auth"],
+    )
+    assert response.status_code == 200
+    assert response.json()["rank"] == "member"
+
+    # Owner can kick users
     response = client.post(
         "/v1/clan/kick",
         json=dict(user_id=nonadmin["id"], clan_id=clan["id"]),
-        auth=admin["auth"],
+        auth=owner["auth"],
     )
     assert response.status_code == 200
     response = client.post(
@@ -214,7 +240,7 @@ def test_clan_invitation(client: TestClient, user: dict, user2: dict, clan_icon:
         params=dict(clan_id=clan["id"]),
         auth=nonadmin["auth"],
     )
-    assert [l["user_id"] for l in response.json()] == [admin["id"]]
+    assert [l["user_id"] for l in response.json()] == [owner["id"]]
 
 
 def test_clan_icon(client: TestClient, user: dict, clan_icon: str):

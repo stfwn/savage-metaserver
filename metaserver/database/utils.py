@@ -36,7 +36,7 @@ class UserClanLinkRank(str, Enum):
         if type(self) is type(other):
             return self.weights[self.value] == self.weights[other.value]
         elif type(other) is str:
-            return self == other
+            return self == self(other)
         raise NotImplementedError
 
     def __geq__(self, other):
