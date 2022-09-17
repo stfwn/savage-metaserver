@@ -28,7 +28,7 @@ from metaserver.database.models import (
     UserClanLink,
     Server,
 )
-from metaserver.database.utils import UserClanLinkDeletedReason
+from metaserver.database.utils import UserClanLinkDeletedReason, UserClanLinkRank
 from metaserver.schemas import (
     ClanCreate,
     ClanUpdateIcon,
@@ -300,7 +300,7 @@ def clan_invite(
     user: UserLogin = Depends(auth.auth_user),
 ):
     if inviter_clan_link := db.get_user_clan_link(session, user.id, clan_id):
-        if inviter_clan_link.is_admin:
+        if inviter_clan_link.rank >= UserClanLinkRank.ADMIN:
             if invitee := db.get_user_by_id(session, user_id):
                 ucl = UserClanLink(user=invitee, clan=inviter_clan_link.clan)
                 try:
@@ -388,9 +388,9 @@ def clan_kick(
         user_clan_link := db.get_user_clan_link(
             session, user_id=user.id, clan_id=clan_id
         )
-    ) and user_clan_link.is_admin:
+    ) and user_clan_link.rank >= UserClanLinkRank.ADMIN:
         member_link = db.get_user_clan_link(session, user_id, clan_id)
-        if member_link.is_admin:
+        if member_link.rank >= UserClanLinkRank.ADMIN:
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN,
                 "Clan admins cannot be kicked",
@@ -453,7 +453,7 @@ def clan_change_icon(
 ):
     if (
         user_clan_link := db.get_user_clan_link(session, user.id, clan_update.clan_id)
-    ) and user_clan_link.is_admin:
+    ) and user_clan_link.rank >= UserClanLinkRank.ADMIN:
         clan = user_clan_link.clan
         clan.icon = clan_update.icon
         db.commit_and_refresh(session, clan)

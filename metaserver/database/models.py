@@ -5,7 +5,7 @@ from typing import Literal, Optional
 
 from sqlmodel import VARCHAR, Column, Field, JSON, Relationship, SQLModel, create_engine
 
-from metaserver.database.utils import UserClanLinkDeletedReason
+from metaserver.database.utils import UserClanLinkDeletedReason, UserClanLinkRank
 
 
 class UserClanLink(SQLModel, table=True):
@@ -15,7 +15,7 @@ class UserClanLink(SQLModel, table=True):
     clan: "Clan" = Relationship(back_populates="user_links")
     user: "User" = Relationship(back_populates="clan_links")
 
-    is_admin: bool = False
+    rank: UserClanLinkRank = UserClanLinkRank.MEMBER
     invited: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     joined: datetime | None
     deleted: datetime | None

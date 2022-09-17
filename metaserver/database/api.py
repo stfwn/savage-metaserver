@@ -7,6 +7,7 @@ from sqlmodel.pool import StaticPool
 
 import metaserver.database.patch  # Bugfix in SQLModel
 from metaserver.database.models import Clan, Skin, User, UserClanLink, Server
+from metaserver.database.utils import UserClanLinkRank
 from metaserver.schemas import ClanCreate, ServerUpdate
 from metaserver import config
 
@@ -106,7 +107,12 @@ def get_user_clan_link(
 
 def create_clan(session: Session, user: User, new_clan: ClanCreate) -> Clan:
     clan = Clan(**new_clan.dict())
-    link = UserClanLink(user=user, clan=clan, is_admin=True, joined=datetime.utcnow())
+    link = UserClanLink(
+        user=user,
+        clan=clan,
+        rank=UserClanLinkRank.OWNER,
+        joined=datetime.utcnow(),
+    )
     session.add(link)
     session.commit()
     session.refresh(clan)
