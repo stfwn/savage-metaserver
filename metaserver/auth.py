@@ -37,9 +37,9 @@ def auth_user_or_server(
     credentials: HTTPBasicCredentials = Depends(security),
 ):
     try:
-        auth_user(session, credentials)
+        return auth_user(session, credentials)
     except HTTPException:
-        auth_server(session, credentials)
+        return auth_server(session, credentials)
 
 
 def auth_user(
