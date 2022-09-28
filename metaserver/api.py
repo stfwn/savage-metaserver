@@ -273,7 +273,7 @@ def clan_by_id(
 def clan_by_id_batch(
     clan_ids: list[int] = Query(),
     *,
-    user: UserLogin = Depends(auth.auth_user),
+    _: UserLogin | ServerLogin = Depends(auth.auth_user_or_server),
     session: Session = Depends(db.get_session),
 ):
     return db.get_clans_by_id(session, clan_ids)
