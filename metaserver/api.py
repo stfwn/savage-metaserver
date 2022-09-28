@@ -262,7 +262,7 @@ def clan_by_id(
     clan_id: int,
     *,
     session: Session = Depends(db.get_session),
-    user: UserLogin = Depends(auth.auth_user),
+    _: UserLogin | ServerLogin = Depends(auth.auth_user_or_server),
 ):
     if clan := db.get_clan_by_id(session, clan_id):
         return clan
@@ -593,19 +593,6 @@ def server_update(
     server: ServerLogin = Depends(auth.auth_server),
 ):
     return db.update_server(session, server, server_update)
-
-
-@app.get("/v1/server/user-clan-link", response_model=UserClanLink)
-def server_user_clan_link(
-    user_id: int = Query(),
-    clan_id: int = Query(),
-    *,
-    session: Session = Depends(db.get_session),
-    server: ServerLogin = Depends(auth.auth_server),
-):
-    if ucl := db.get_user_clan_link(session, user_id, clan_id):
-        return ucl
-    raise HTTPException(status.HTTP_404_NOT_FOUND, "User not in clan.")
 
 
 @app.post("/v1/server/verify-clan-membership", response_model=bool)

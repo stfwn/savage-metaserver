@@ -32,6 +32,16 @@ def new_password(password: SecretStr):
     return key, salt
 
 
+def auth_user_or_server(
+    session: Session = Depends(db.get_session),
+    credentials: HTTPBasicCredentials = Depends(security),
+):
+    try:
+        auth_user(session, credentials)
+    except HTTPException:
+        auth_server(session, credentials)
+
+
 def auth_user(
     session: Session = Depends(db.get_session),
     credentials: HTTPBasicCredentials = Depends(security),
