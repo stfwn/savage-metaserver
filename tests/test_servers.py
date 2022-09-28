@@ -121,6 +121,14 @@ def test_server_verify_clan_membership(
     )
     assert response.json() is True
 
+    response = client.get(
+        "/v1/server/user-clan-link",
+        params=dict(user_id=user["id"], clan_id=clan["id"]),
+        auth=server["auth"],
+    )
+    assert response.status_code == 200
+    assert response.json()["user_id"] == user["id"]
+
     # Check that user2 is not in clan
     response = client.post(
         "/v1/server/verify-clan-membership",
@@ -128,3 +136,10 @@ def test_server_verify_clan_membership(
         auth=server["auth"],
     )
     assert response.json() is False
+
+    response = client.get(
+        "/v1/server/user-clan-link",
+        params=dict(user_id=user2["id"], clan_id=clan["id"]),
+        auth=server["auth"],
+    )
+    assert response.status_code == 404
