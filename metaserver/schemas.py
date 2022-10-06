@@ -9,6 +9,7 @@ from typing import Optional
 from PIL import Image
 from pydantic import (
     BaseModel,
+    EmailError,
     EmailStr,
     Field,
     NonNegativeInt,
@@ -55,6 +56,15 @@ class UserCreate(BaseModel):
         if val.split("@")[-1] in email.domain_blacklist:
             raise mail.DomainBlackListError("Username mail domain is in blacklist")
         return val
+
+    @validator("display_name", pre=True)
+    def validate_display_name(cls, val):
+        # Display name can't be an email.
+        try:
+            EmailStr.validate(val)
+            raise ValueError("Display name can't be an email address")
+        except EmailError:
+            return val
 
 
 class UserLogin(BaseModel):
