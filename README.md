@@ -133,3 +133,40 @@ Yes. Follow the installation steps, run the server with `make serve` and visit
 `127.0.0.1:8000/docs`. You can even get an `openapi.json` file from
 `http://127.0.0.1:8000/openapi.json` and automatically generate a client from
 it.
+
+### How does the ranking system work?
+
+
+It's my generalization of the [Elo rating
+system](https://en.wikipedia.org/wiki/Elo_rating_system) for teams. Let the
+rating of a given player $n$ be $R_n$, and let the mean rating of a team they
+played on be $T_n$. Using a hyperparameter $\lambda$, we define the
+team-weighted rating for player $n$:
+
+$$R_n^w = \lambda T_{n} + (1-\lambda) R_{n}$$
+
+If player $a$ and player $b$ played a match on opposing teams, the expected
+score $E_a$ for player $a$ is:
+
+$$E_a = \frac{Q_a}{Q_a + Q_b}$$
+
+With $Q_n = 10^{R^w_n \over S}$, where $S$ is the starting rating for new
+players. Finally, if player $n$'s team won, the new rating for this player is
+computed:
+
+$$R'_n = R_n + \frac{S \alpha}{R_n} (A_n - E_n)$$
+
+Here $\alpha > 0$ is a hyperparameter that sets the update step size, and $A_n$
+is the achieved score for player $n$, which is $1$ in case of a win, $0.5$ in
+case of a draw, and $0$ in case of a loss.
+
+Some nice properties compared to vanilla Elo:
+
+- The expected score is adjusted based on both the player's own rating, as well
+  as the team's rating. The balance can be adjusted to place more importance on
+  the team's rating ($\lambda \rightarrow 1$), or the individual's contribution
+  $(\lambda \rightarrow 0)$.
+- It's harder for players at the top end to gain/lose rating than it is at the
+  bottom. This achieves two goals:
+  - It limits rating inflation over time.
+  - It limits incentives to be risk-averse for players with a high rating.

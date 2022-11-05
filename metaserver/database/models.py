@@ -5,6 +5,7 @@ from typing import Literal, Optional
 
 from sqlmodel import VARCHAR, Column, Field, JSON, Relationship, SQLModel, create_engine
 
+from metaserver import config
 from metaserver.database.utils import UserClanLinkDeletedReason, UserClanLinkRank
 
 
@@ -78,6 +79,23 @@ class UserSkinLink(SQLModel, table=True):
     user: "User" = Relationship(back_populates="skin_links")
 
 
+class UserStats(SQLModel, table=True):
+    """Maintains running stats per user per server."""
+
+    user_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
+    server_id: int | None = Field(
+        default=None, foreign_key="server.id", primary_key=True
+    )
+
+    user: "User" = Relationship(back_populates="stats")
+    server: "Server" = Relationship(back_populates="user_stats")
+
+    first_seen: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    last_seen: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    matches_played: int = 0
+    skill_rating: int = config.initial_user_skill_rating
+
+
 class User(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     username: str = Field(
@@ -94,6 +112,7 @@ class User(SQLModel, table=True):
     deleted_reason: str | None
     last_online: datetime | None
 
+    stats: list[UserStats] = Relationship(back_populates="user")
     clan_links: list[UserClanLink] = Relationship(back_populates="user")
     email_token: Optional["EmailToken"] = Relationship(
         back_populates="user", sa_relationship_kwargs={"uselist": False}
@@ -145,6 +164,7 @@ class Server(SQLModel, table=True):
     # matches: list["Match"] = Relationship(back_populates="server")
     user_id: int = Field(default=None, foreign_key="user.id")
     user: User = Relationship(back_populates="servers")
+    user_stats: list[UserStats] = Relationship(back_populates="server")
 
 
 class EmailToken(SQLModel, table=True):

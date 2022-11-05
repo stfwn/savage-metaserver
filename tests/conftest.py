@@ -70,7 +70,12 @@ def server(client: TestClient, user: dict):
         auth=user["auth"],
     ).json()
 
-    return {"auth": (server_login["username"], server_login["password"])}
+    user_servers = client.get("/v1/server/list/my", auth=user["auth"]).json()
+
+    return {
+        "auth": (server_login["username"], server_login["password"]),
+        "id": user_servers[0]["id"],
+    }
 
 
 @pytest.fixture

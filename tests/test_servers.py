@@ -137,3 +137,178 @@ def test_server_verify_clan_membership(
         auth=server["auth"],
     )
     assert response.json() is False
+
+
+def test_match_update(client: TestClient, user: dict, user2: dict, server: dict):
+    response = client.get(
+        "/v1/user/stats",
+        params=dict(user_id=user["id"], server_id=server["id"]),
+        auth=user["auth"],
+    )
+
+    assert response.status_code == 404
+
+    # Post a draw and see if the ratings are stable at the initial level.
+    response = client.post(
+        "/v1/server/match-update",
+        json={
+            "teams": [
+                {
+                    "id": 0,
+                    "race": "beast",
+                    "field_players": [{"user_id": user["id"]}],
+                    "commander": 9,
+                },
+                {
+                    "id": 1,
+                    "race": "human",
+                    "field_players": [{"user_id": user2["id"]}],
+                    "commander": 9,
+                },
+            ],
+            "winner": -1,
+        },
+        auth=server["auth"],
+    )
+    assert response.status_code == 200
+
+    response = client.get(
+        "/v1/user/stats",
+        params=dict(user_id=user["id"], server_id=server["id"]),
+        auth=user["auth"],
+    )
+    assert response.status_code == 200
+    assert response.json()["skill_rating"] == config.initial_user_skill_rating
+
+    response = client.get(
+        "/v1/user/stats",
+        params=dict(user_id=user2["id"], server_id=server["id"]),
+        auth=user["auth"],
+    )
+
+    assert response.status_code == 200
+    assert response.json()["skill_rating"] == config.initial_user_skill_rating
+
+    # Post a win for user and see if the ratings went in the right direction
+    response = client.post(
+        "/v1/server/match-update",
+        json={
+            "teams": [
+                {
+                    "id": 0,
+                    "race": "beast",
+                    "field_players": [{"user_id": user["id"]}],
+                    "commander": 9,
+                },
+                {
+                    "id": 1,
+                    "race": "human",
+                    "field_players": [{"user_id": user2["id"]}],
+                    "commander": 9,
+                },
+            ],
+            "winner": 0,
+        },
+        auth=server["auth"],
+    )
+    assert response.status_code == 200
+
+    response = client.get(
+        "/v1/user/stats",
+        params=dict(user_id=user["id"], server_id=server["id"]),
+        auth=user["auth"],
+    )
+    assert response.status_code == 200
+    assert response.json()["skill_rating"] > config.initial_user_skill_rating
+    user_post_update = response.json()["skill_rating"]
+
+    response = client.get(
+        "/v1/user/stats",
+        params=dict(user_id=user2["id"], server_id=server["id"]),
+        auth=user["auth"],
+    )
+    assert response.status_code == 200
+    assert response.json()["skill_rating"] < config.initial_user_skill_rating
+    user2_post_update = response.json()["skill_rating"]
+
+    # Post a draw and see if the ratings went in the right direction
+    response = client.post(
+        "/v1/server/match-update",
+        json={
+            "teams": [
+                {
+                    "id": 0,
+                    "race": "beast",
+                    "field_players": [{"user_id": user["id"]}],
+                    "commander": 9,
+                },
+                {
+                    "id": 1,
+                    "race": "human",
+                    "field_players": [{"user_id": user2["id"]}],
+                    "commander": 9,
+                },
+            ],
+            "winner": -1,
+        },
+        auth=server["auth"],
+    )
+    assert response.status_code == 200
+
+    response = client.get(
+        "/v1/user/stats",
+        params=dict(user_id=user["id"], server_id=server["id"]),
+        auth=user["auth"],
+    )
+    assert response.status_code == 200
+    assert response.json()["skill_rating"] < user_post_update
+    user_post_update = response.json()["skill_rating"]
+
+    response = client.get(
+        "/v1/user/stats",
+        params=dict(user_id=user2["id"], server_id=server["id"]),
+        auth=user["auth"],
+    )
+    assert response.status_code == 200
+    assert response.json()["skill_rating"] > user2_post_update
+    user2_post_update = response.json()["skill_rating"]
+
+    # Post a loss for user and see if the ratings went in the right direction
+    response = client.post(
+        "/v1/server/match-update",
+        json={
+            "teams": [
+                {
+                    "id": 0,
+                    "race": "beast",
+                    "field_players": [{"user_id": user["id"]}],
+                    "commander": 9,
+                },
+                {
+                    "id": 1,
+                    "race": "human",
+                    "field_players": [{"user_id": user2["id"]}],
+                    "commander": 9,
+                },
+            ],
+            "winner": 1,
+        },
+        auth=server["auth"],
+    )
+    assert response.status_code == 200
+
+    response = client.get(
+        "/v1/user/stats",
+        params=dict(user_id=user["id"], server_id=server["id"]),
+        auth=user["auth"],
+    )
+    assert response.status_code == 200
+    assert response.json()["skill_rating"] < user_post_update
+
+    response = client.get(
+        "/v1/user/stats",
+        params=dict(user_id=user2["id"], server_id=server["id"]),
+        auth=user["auth"],
+    )
+    assert response.status_code == 200
+    assert response.json()["skill_rating"] > user2_post_update

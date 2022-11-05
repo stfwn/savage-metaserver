@@ -1,5 +1,6 @@
 from datetime import datetime
 import base64
+from itertools import chain
 import json
 import secrets
 
@@ -26,16 +27,20 @@ from metaserver.database.models import (
     Skin,
     User,
     UserClanLink,
+    UserStats,
     Server,
 )
 from metaserver.database.utils import UserClanLinkDeletedReason, UserClanLinkRank
+from metaserver import metrics
 from metaserver.schemas import (
     ClanCreate,
     ClanUpdateIcon,
+    MatchUpdate,
     ServerLogin,
     ServerCreate,
     ServerRead,
     ServerUpdate,
+    Team,
     UserClanLinkUpdateRank,
     UserCreate,
     UserLogin,
@@ -230,6 +235,30 @@ def user_change_display_name(
 ):
     user.display_name = display_name
     return db.commit_and_refresh(session, user)
+
+
+@app.get("/v1/user/stats", response_model=UserStats)
+def get_user_stats(
+    user_id: int = Query(),
+    server_id: int = Query(),
+    *,
+    session: Session = Depends(db.get_session),
+    _: UserLogin | ServerLogin = Depends(auth.auth_user_or_server),
+):
+    if user_stats := db.get_user_stats(session, user_id, server_id):
+        return user_stats
+    raise HTTPException(status.HTTP_404_NOT_FOUND)
+
+
+@app.get("/v1/user/stats/batch", response_model=list[UserStats])
+def get_user_stats(
+    user_ids: int = Query(),
+    server_id: int = Query(),
+    *,
+    session: Session = Depends(db.get_session),
+    _: UserLogin | ServerLogin = Depends(auth.auth_user_or_server),
+):
+    return db.get_user_stats_batch(session, user_id, server_id)
 
 
 ############
@@ -606,3 +635,60 @@ def server_verify_clan_membership(
     if link := db.get_user_clan_link(session, user_id, clan_id):
         return link.is_membership
     return False
+
+
+@app.post("/v1/server/match-update")
+def server_match_update(
+    match_update: MatchUpdate,
+    *,
+    session: Session = Depends(db.get_session),
+    server: ServerLogin = Depends(auth.auth_server),
+):
+    """Post a match update to update stats per player for this server. The
+    match update data itself is not stored (yet)."""
+    user_stats_per_team = {
+        team.id: db.get_user_stats_batch(
+            session,
+            [fp.user_id for fp in team.field_players],
+            server.id,
+        )
+        for team in match_update.teams
+    }
+
+    for team_id, users_stats in user_stats_per_team.items():
+        new_users = [
+            set([us.user_id for us in team.field_players])
+            for team in match_update.teams
+            if team.id == team_id
+        ][0] - set([us.user_id for us in users_stats])
+        for user_id in new_users:
+            new_stats = UserStats(user_id=user_id, server_id=server.id)
+            new_stats = db.commit_and_refresh(session, new_stats)
+            user_stats_per_team[team_id].append(new_stats)
+
+    mean_rating_per_team = {
+        team_id: metrics.mean_skill_rating(us)
+        for team_id, us in user_stats_per_team.items()
+    }
+    for team_id, user_stats in user_stats_per_team.items():
+        for us in user_stats:
+            us.skill_rating = metrics.skill_rating(
+                current_rating=us.skill_rating,
+                mean_team_rating=mean_rating_per_team[team_id],
+                mean_opponent_rating=(
+                    mean_rating_per_team[match_update.winner]
+                    if match_update.winner != -1
+                    else sum(
+                        [m for tid, m in mean_rating_per_team.items() if tid != team_id]
+                    )
+                    / (len(match_update.teams) - 1)
+                ),
+                achieved_score=(
+                    (team_id == match_update.winner)
+                    if match_update.winner != -1
+                    else 0.5
+                ),
+            )
+            us.last_seen = datetime.utcnow()
+            us.matches_played += 1
+        db.commit_and_refresh_batch(session, user_stats)

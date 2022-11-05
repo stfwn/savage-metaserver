@@ -1,10 +1,12 @@
 import base64
 import binascii
+from enum import Enum
 from datetime import datetime
+from itertools import combinations
 import io
 from ipaddress import IPv4Address, IPv6Address
 import re
-from typing import Optional
+from typing import Literal, Optional
 
 from PIL import Image
 from pydantic import (
@@ -15,7 +17,10 @@ from pydantic import (
     NonNegativeInt,
     SecretStr,
     ValidationError,
+    conint,
+    conlist,
     constr,
+    root_validator,
     validator,
 )
 
@@ -177,3 +182,53 @@ class ServerRead(ServerCreate):
     current_map: constr(max_length=100)
     current_player_count: NonNegativeInt
     updated: Optional[datetime]
+
+
+#########
+# Stats #
+#########
+
+
+class Race(str, Enum):
+    human = "human"
+    beast = "beast"
+
+
+class FieldPlayer(BaseModel):
+    user_id: int
+
+
+class Team(BaseModel):
+    id: conint(gt=-1, lt=4)
+    race: Race
+    field_players: conlist(item_type=FieldPlayer, max_items=32, unique_items=True)
+    commander: int
+
+
+class MatchUpdate(BaseModel):
+    teams: conlist(item_type=Team, min_items=2, max_items=4, unique_items=True)
+    winner: conint(ge=-1, le=3)  # -1 is draw, others are winning team indices
+
+    @root_validator
+    def check_winner_index_in_bounds(cls, values):
+        if (
+            (winner := values.get("winner"))
+            and winner != -1
+            and winner not in [t.id for t in values["teams"]]
+        ):
+            raise ValueError("winner index is not an id of one of the teams")
+        return values
+
+    @validator("teams")
+    def check_teams_disjoint(cls, values):
+        assert all(
+            [
+                (
+                    set([p.user_id for p in a.field_players]).isdisjoint(
+                        set([p.user_id for p in b.field_players])
+                    )
+                )
+                for a, b in combinations(values, r=2)
+            ]
+        ), "Teams should be disjoint"
+        return values

@@ -11,3 +11,16 @@ email_token_renew_timeout = timedelta(seconds=30)
 
 # The granularity of this format determines how long a proof is valid
 proof_datetime_component_format = "%Y-%m-%dT%H:%M"
+
+#######################
+# Skill rating config #
+#######################
+
+# When a user first starts playing on a server.
+initial_user_skill_rating = 800
+
+# Lambda -> 1: more importance on team rating.
+# Lambda -> 0: more importance on individual rating.
+lambda_ = 0.8
+
+skill_rating_update_step_size = 64

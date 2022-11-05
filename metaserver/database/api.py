@@ -6,7 +6,7 @@ from sqlmodel import Session, SQLModel, col, create_engine, select
 from sqlmodel.pool import StaticPool
 
 import metaserver.database.patch  # Bugfix in SQLModel
-from metaserver.database.models import Clan, Skin, User, UserClanLink, Server
+from metaserver.database.models import Clan, Skin, User, UserClanLink, Server, UserStats
 from metaserver.database.utils import UserClanLinkRank
 from metaserver.schemas import ClanCreate, ServerUpdate
 from metaserver import config
@@ -49,6 +49,18 @@ def commit_and_refresh(
     return model
 
 
+def commit_and_refresh_batch(
+    session: Session,
+    models: list[Clan | Skin | User | UserClanLink | Server | UserStats],
+):
+    for model in models:
+        session.add(model)
+    session.commit()
+    for model in models:
+        session.refresh(model)
+    return models
+
+
 ########
 # User #
 ########
@@ -88,16 +100,59 @@ def set_user_last_online_now_by_id(session: Session, user_id: int):
 
 
 def get_user_clan_link(
-    session: Session, user_id: int, clan_id: int
+    session: Session,
+    user_id: int,
+    clan_id: int,
 ) -> UserClanLink | None:
     try:
         return session.exec(
-            select(UserClanLink)
-            .where(UserClanLink.user_id == user_id)
-            .where(UserClanLink.clan_id == clan_id)
+            select(UserClanLink).where(
+                UserClanLink.user_id == user_id,
+                UserClanLink.clan_id == clan_id,
+            )
         ).one()
     except NoResultFound:
         return None
+
+
+#########
+# Stats #
+#########
+
+
+def get_user_stats(
+    session: Session,
+    user_id: int,
+    server_id: int,
+) -> UserStats | None:
+    """Fetches UserStats for the requested user-server pairs in batch form.
+    Users that have never played on the server will be excluded from the
+    result."""
+    try:
+        return session.exec(
+            select(UserStats).where(
+                UserStats.user_id == user_id,
+                UserStats.server_id == server_id,
+            )
+        ).one()
+    except NoResultFound:
+        return None
+
+
+def get_user_stats_batch(
+    session: Session,
+    user_ids: list[int],
+    server_id: int,
+) -> list[UserStats]:
+    """Fetches UserStats for the requested user-server pairs in batch form.
+    Users that have never played on the server will be excluded from the
+    result."""
+    return session.exec(
+        select(UserStats).where(
+            col(UserStats.user_id).in_(user_ids),
+            UserStats.server_id == server_id,
+        )
+    ).all()
 
 
 ########
