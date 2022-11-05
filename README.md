@@ -164,7 +164,7 @@ Some nice properties compared to vanilla Elo:
 
 - The expected score is adjusted based on both the player's own rating, as well
   as the team's rating. The balance can be adjusted to place more importance on
-  the team's rating ($\lambda \rightarrow 1$), or the individual's contribution
+  the team's rating $(\lambda \rightarrow 1)$, or the individual's contribution
   $(\lambda \rightarrow 0)$.
 - It's harder for players at the top end to gain/lose rating than it is at the
   bottom. This achieves two goals:
