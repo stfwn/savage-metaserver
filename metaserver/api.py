@@ -68,7 +68,7 @@ def index():
 ############
 
 
-@app.get("/v1/user/by-id", response_model=UserRead)
+@app.get("/v1/user/by-id", response_model=UserRead, tags=["user"])
 def user(
     user_id: int = Query(),
     *,
@@ -80,7 +80,7 @@ def user(
     raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
 
 
-@app.get("/v1/user/by-id/batch", response_model=list[UserRead])
+@app.get("/v1/user/by-id/batch", response_model=list[UserRead], tags=["user"])
 def user_by_id_batch(
     user_ids: list[int] = Query(),
     *,
@@ -90,7 +90,7 @@ def user_by_id_batch(
     return db.get_users_by_id(session, user_ids)
 
 
-@app.get("/v1/user/clan-invites", response_model=list[UserClanLink])
+@app.get("/v1/user/clan-invites", response_model=list[UserClanLink], tags=["user"])
 def user_clan_invites(
     *,
     user: UserLogin = Depends(auth.auth_user),
@@ -99,7 +99,7 @@ def user_clan_invites(
     return [link for link in user.clan_links if link.is_open_invitation]
 
 
-@app.post("/v1/user/login", response_model=UserReadWithProof)
+@app.post("/v1/user/login", response_model=UserReadWithProof, tags=["user"])
 def user_login(
     *,
     user: UserLogin = Depends(auth.auth_user),
@@ -122,7 +122,7 @@ def user_login(
     return UserReadWithProof(**user.dict(), proof=user_proof)
 
 
-@app.post("/v1/user/verify-user-proof", response_model=bool)
+@app.post("/v1/user/verify-user-proof", response_model=bool, tags=["user"])
 def user_verify_user_proof(
     user_id: int = Body(embed=True),
     user_proof: str = Body(embed=True),
@@ -137,7 +137,7 @@ def user_verify_user_proof(
     return False
 
 
-@app.post("/v1/user/register", response_model=UserReadWithProof)
+@app.post("/v1/user/register", response_model=UserReadWithProof, tags=["user"])
 def user_register(
     new_user: UserCreate,
     *,
@@ -164,7 +164,7 @@ def user_register(
     return UserReadWithProof(**user.dict(), proof=auth.generate_user_proof(user.id))
 
 
-@app.post("/v1/user/verify-clan-membership", response_model=bool)
+@app.post("/v1/user/verify-clan-membership", response_model=bool, tags=["user"])
 def user_verify_clan_membership(
     clan_id: int = Body(embed=True),
     *,
@@ -176,7 +176,7 @@ def user_verify_clan_membership(
     return False
 
 
-@app.post("/v1/user/email/verify", response_model=UserReadWithProof)
+@app.post("/v1/user/email/verify", response_model=UserReadWithProof, tags=["user"])
 def user_email_verify(
     mail_token: str = Body(embed=True, min_length=6, max_length=6),
     *,
@@ -206,7 +206,7 @@ def user_email_verify(
         )
 
 
-@app.post("/v1/user/email/renew-token")
+@app.post("/v1/user/email/renew-token", tags=["user"])
 def user_email_new_token(
     *,
     session: Session = Depends(db.get_session),
@@ -226,7 +226,7 @@ def user_email_new_token(
     return "Token sent"
 
 
-@app.post("/v1/user/change-display-name", response_model=UserRead)
+@app.post("/v1/user/change-display-name", response_model=UserRead, tags=["user"])
 def user_change_display_name(
     display_name: str = Body(embed=True, min_length=1, max_length=64),
     *,
@@ -237,7 +237,7 @@ def user_change_display_name(
     return db.commit_and_refresh(session, user)
 
 
-@app.get("/v1/user/stats", response_model=UserStats)
+@app.get("/v1/user/stats", response_model=UserStats, tags=["user"])
 def get_user_stats(
     user_id: int = Query(),
     server_id: int = Query(),
@@ -250,7 +250,7 @@ def get_user_stats(
     raise HTTPException(status.HTTP_404_NOT_FOUND)
 
 
-@app.get("/v1/user/stats/batch", response_model=list[UserStats])
+@app.get("/v1/user/stats/batch", response_model=list[UserStats], tags=["user"])
 def get_user_stats(
     user_ids: int = Query(),
     server_id: int = Query(),
@@ -266,7 +266,7 @@ def get_user_stats(
 ############
 
 
-@app.get("/v1/clan/all", response_model=list[Clan])
+@app.get("/v1/clan/all", response_model=list[Clan], tags=["clan"])
 def clan(
     *,
     session: Session = Depends(db.get_session),
@@ -279,6 +279,7 @@ def clan(
     "/v1/clan/icon/{clan_id}.png",
     responses={200: {"content": {"image/png": {}}}},
     response_class=Response,
+    tags=["clan"],
 )
 def get_clan_icon_png(clan_id: int, session: Session = Depends(db.get_session)):
     if clan := db.get_clan_by_id(session, clan_id):
@@ -286,7 +287,7 @@ def get_clan_icon_png(clan_id: int, session: Session = Depends(db.get_session)):
     raise HTTPException(status.HTTP_404_NOT_FOUND)
 
 
-@app.get("/v1/clan/by-id", response_model=Clan)
+@app.get("/v1/clan/by-id", response_model=Clan, tags=["clan"])
 def clan_by_id(
     clan_id: int,
     *,
@@ -298,7 +299,7 @@ def clan_by_id(
     raise HTTPException(status.HTTP_404_NOT_FOUND, "Clan not found")
 
 
-@app.get("/v1/clan/by-id/batch", response_model=list[Clan])
+@app.get("/v1/clan/by-id/batch", response_model=list[Clan], tags=["clan"])
 def clan_by_id_batch(
     clan_ids: list[int] = Query(),
     *,
@@ -308,7 +309,7 @@ def clan_by_id_batch(
     return db.get_clans_by_id(session, clan_ids)
 
 
-@app.get("/v1/clan/for-user/by-id", response_model=list[UserClanLink])
+@app.get("/v1/clan/for-user/by-id", response_model=list[UserClanLink], tags=["clan"])
 def clan_for_user_by_id(
     user_id: int,
     *,
@@ -321,7 +322,7 @@ def clan_for_user_by_id(
     return [link for link in user.clan_links if link.is_membership]
 
 
-@app.post("/v1/clan/invite")
+@app.post("/v1/clan/invite", tags=["clan"])
 def clan_invite(
     user_id: int = Body(embed=True),
     clan_id: int = Body(embed=True),
@@ -354,7 +355,7 @@ def clan_invite(
         )
 
 
-@app.post("/v1/clan/invite-response")
+@app.post("/v1/clan/invite-response", tags=["clan"])
 def clan_invite_response(
     clan_id: int = Body(embed=True),
     accept: bool = Body(embed=True),
@@ -403,7 +404,7 @@ def clan_invite_response(
     )
 
 
-@app.post("/v1/clan/kick")
+@app.post("/v1/clan/kick", tags=["clan"])
 def clan_kick(
     clan_id: int = Body(embed=True),
     user_id: int = Body(embed=True),
@@ -441,7 +442,7 @@ def clan_kick(
     )
 
 
-@app.get("/v1/clan/invites", response_model=list[UserClanLink])
+@app.get("/v1/clan/invites", response_model=list[UserClanLink], tags=["clan"])
 def clan_invites(
     clan_id: int,
     *,
@@ -456,7 +457,7 @@ def clan_invites(
     )
 
 
-@app.get("/v1/clan/members", response_model=list[UserClanLink])
+@app.get("/v1/clan/members", response_model=list[UserClanLink], tags=["clan"])
 def clan_members(
     clan_id: int,
     *,
@@ -467,7 +468,7 @@ def clan_members(
     return [link for link in clan.user_links if link.is_membership]
 
 
-@app.post("/v1/clan/register", response_model=Clan)
+@app.post("/v1/clan/register", response_model=Clan, tags=["clan"])
 def clan_register(
     new_clan: ClanCreate,
     *,
@@ -480,7 +481,7 @@ def clan_register(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 
-@app.post("/v1/clan/update-icon", response_model=Clan)
+@app.post("/v1/clan/update-icon", response_model=Clan, tags=["clan"])
 def clan_change_icon(
     clan_update: ClanUpdateIcon,
     *,
@@ -500,7 +501,7 @@ def clan_change_icon(
     )
 
 
-@app.post("/v1/clan/update-rank", response_model=UserClanLink)
+@app.post("/v1/clan/update-rank", response_model=UserClanLink, tags=["clan"])
 def clan_update_rank(
     update: UserClanLinkUpdateRank,
     *,
@@ -541,7 +542,7 @@ def clan_update_rank(
 ############
 
 
-@app.get("/v1/skin/for-user/by-id", response_model=list[Skin])
+@app.get("/v1/skin/for-user/by-id", response_model=list[Skin], tags=["skin"])
 def skin_for_user_by_id(
     user_id: int = Query(),
     clan_id: int | None = Query(None),
@@ -555,7 +556,7 @@ def skin_for_user_by_id(
     return skins
 
 
-@app.get("/v1/skin/for-clan/by-id", response_model=list[Skin])
+@app.get("/v1/skin/for-clan/by-id", response_model=list[Skin], tags=["skin"])
 def skin_for_clan_by_id(
     clan_id: int,
     *,
@@ -570,7 +571,7 @@ def skin_for_clan_by_id(
 ##############
 
 
-@app.post("/v1/server/register", response_model=ServerLogin)
+@app.post("/v1/server/register", response_model=ServerLogin, tags=["server"])
 def server_register(
     new_server: ServerCreate,
     *,
@@ -597,7 +598,7 @@ def server_register(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 
-@app.get("/v1/server/list/my", response_model=list[ServerRead])
+@app.get("/v1/server/list/my", response_model=list[ServerRead], tags=["server"])
 def server_list_my(
     *,
     session: Session = Depends(db.get_session),
@@ -606,7 +607,7 @@ def server_list_my(
     return user.servers
 
 
-@app.get("/v1/server/list/online", response_model=list[ServerRead])
+@app.get("/v1/server/list/online", response_model=list[ServerRead], tags=["server"])
 def server_list_online(*, session: Session = Depends(db.get_session)):
     return db.get_online_servers(
         session,
@@ -614,7 +615,7 @@ def server_list_online(*, session: Session = Depends(db.get_session)):
     )
 
 
-@app.post("/v1/server/update", response_model=ServerRead)
+@app.post("/v1/server/update", response_model=ServerRead, tags=["server"])
 def server_update(
     server_update: ServerUpdate,
     *,
@@ -624,7 +625,7 @@ def server_update(
     return db.update_server(session, server, server_update)
 
 
-@app.post("/v1/server/verify-clan-membership", response_model=bool)
+@app.post("/v1/server/verify-clan-membership", response_model=bool, tags=["server"])
 def server_verify_clan_membership(
     user_id: int = Body(embed=True),
     clan_id: int = Body(embed=True),
@@ -637,7 +638,7 @@ def server_verify_clan_membership(
     return False
 
 
-@app.post("/v1/server/match-update")
+@app.post("/v1/server/match-update", tags=["server"])
 def server_match_update(
     match_update: MatchUpdate,
     *,
