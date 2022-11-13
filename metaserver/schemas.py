@@ -201,7 +201,12 @@ class FieldPlayer(BaseModel):
 class Team(BaseModel):
     id: conint(gt=-1, lt=4)
     race: Race
-    field_players: conlist(item_type=FieldPlayer, max_items=32, unique_items=True)
+    field_players: conlist(
+        item_type=FieldPlayer,
+        min_items=1,
+        max_items=32,
+        unique_items=True,
+    )
     commander: int
 
 
