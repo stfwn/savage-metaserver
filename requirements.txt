@@ -18,7 +18,7 @@ h11==0.13.0
 idna==3.3
 iniconfig==1.1.1
 jmespath==1.0.0
-Mako==1.2.1
+Mako==1.2.3
 MarkupSafe==2.1.1
 mypy-extensions==0.4.3
 packaging==21.3
