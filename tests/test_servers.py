@@ -281,8 +281,8 @@ def test_match_update(client: TestClient, user: dict, user2: dict, server: dict)
                 {
                     "id": 0,
                     "race": "beast",
-                    "field_players": [{"user_id": user["id"]}],
-                    "commander": 9,
+                    "field_players": [{"user_id": user["id"]}, {"user_id": -1}],
+                    "commander": -5,
                 },
                 {
                     "id": 1,

@@ -662,14 +662,9 @@ def server_match_update(
             for team in match_update.teams
             if team.id == team_id
         ][0] - set([us.user_id for us in users_stats])
-        new_stats_to_commit = []
         for user_id in new_users:
             new_stats = UserStats(user_id=user_id, server_id=server.id)
             user_stats_per_team[team_id].append(new_stats)
-            # Game server may use 0 or < 0 for unregistered users.
-            if user_id > 0:
-                new_stats_to_commit.append(new_stats)
-        db.commit_and_refresh_batch(session, new_stats_to_commit)
 
     mean_rating_per_team = {
         team_id: metrics.mean_skill_rating(us)
@@ -695,7 +690,22 @@ def server_match_update(
                 ),
             )
             us.last_seen = datetime.utcnow()
-            us.matches_played += 1
+            us.matches_played_field += 1
+            if team_id == match_update.winner:
+                us.matches_won_field += 1
+        # Game server may use 0 or < 0 for unregistered users.
         db.commit_and_refresh_batch(
             session, [us for us in user_stats if us.user_id > 0]
         )
+
+    to_commit = list(chain(*user_stats_per_team.values()))
+    for team in match_update.teams:
+        if comm_stats := db.get_user_stats(
+            session, user_id=team.commander, server_id=server.id
+        ):
+            comm_stats.matches_played_command += 1
+            if team.id == match_update.winner:
+                comm_stats.matches_won_command += 1
+            to_commit.append(comm_stats)
+
+    db.commit_and_refresh_batch(session, [us for us in to_commit if us.user_id > 0])

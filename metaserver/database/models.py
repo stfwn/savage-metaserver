@@ -92,7 +92,10 @@ class UserStats(SQLModel, table=True):
 
     first_seen: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     last_seen: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    matches_played: int = 0
+    matches_played_field: int = 0
+    matches_played_command: int = 0
+    matches_won_field: int = 0
+    matches_won_command: int = 0
     skill_rating: int = config.initial_user_skill_rating
 
 
